@@ -21,7 +21,7 @@ export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: Dhol
       <div className="relative z-10 flex-1 rounded-[1.5rem] border-[1.5px] border-border/80 overflow-hidden flex flex-col justify-between p-5 group-hover:border-primary/50 transition-colors shadow-[inset_0_4px_20px_rgba(255,255,255,0.03)]">
 
         {/* Top/Image Area with 3D Pedestal */}
-        <div className="relative flex-1 w-full flex flex-col items-center justify-center pt-2 pb-12">
+        <div className="relative flex-1 w-full flex flex-col items-center justify-end pb-[32px]">
 
           {/* Floating Product Image */}
           <img
