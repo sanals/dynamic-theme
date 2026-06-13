@@ -31,22 +31,22 @@ export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: Dhol
           />
 
           {/* 3D Pedestal using CSS Cylinder */}
-          <div className="absolute bottom-4 w-[75%] h-[40px] z-10 flex flex-col items-center group-hover:scale-95 transition-transform duration-500">
+          <div className="absolute bottom-4 w-[75%] h-[36px] z-10 flex flex-col items-center group-hover:scale-95 transition-transform duration-500">
 
             {/* Shadow cast BY the image ONTO the pedestal */}
-            <div className="absolute top-[20px] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55%] h-[25px] bg-black/60 blur-[8px] rounded-[50%] z-20 pointer-events-none" />
+            <div className="absolute top-[18px] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55%] h-[21px] bg-black/60 blur-[10px] rounded-[50%] z-20 pointer-events-none" />
 
             {/* Top of pedestal (Light Green) */}
-            <div className="w-full h-[40px] bg-pedestal-top rounded-[50%] absolute top-0 z-10 border border-pedestal-top-border/30 shadow-[inset_0_-2px_10px_rgba(0,0,0,0.1)]" />
+            <div className="w-full h-[36px] bg-pedestal-top rounded-[50%] absolute top-0 z-10 blur-[1.5px] shadow-[inset_0_-3px_12px_rgba(0,0,0,0.15),0_0_8px_rgba(0,0,0,0.1)]" />
 
             {/* Body of pedestal (Dark Green) */}
-            <div className="w-full h-[20px] bg-pedestal-body absolute top-[20px] z-0" />
+            <div className="w-full h-[12px] bg-pedestal-body absolute top-[18px] z-0" />
 
             {/* Bottom curve of pedestal (Dark Green) */}
-            <div className="w-full h-[40px] bg-pedestal-body rounded-[50%] absolute top-[20px] shadow-2xl z-0 border-b border-black/40" />
+            <div className="w-full h-[36px] bg-pedestal-body rounded-[50%] absolute top-[12px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] z-0 blur-[1.5px]" />
 
             {/* Soft floor shadow cast BY the pedestal ONTO the floor */}
-            <div className="w-[110%] h-[30px] bg-pedestal-shadow/80 blur-xl rounded-[50%] absolute top-[35px] -z-10" />
+            <div className="w-[110%] h-[24px] bg-pedestal-shadow/80 blur-xl rounded-[50%] absolute top-[30px] -z-10" />
           </div>
         </div>
 
