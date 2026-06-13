@@ -30,7 +30,7 @@ export function H2NProductCard({
         {/* Product Image Placeholder */}
         <div className="w-full h-full relative z-10">
           {imageUrl ? (
-            <img src={imageUrl} alt={title} className="w-full h-full object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-500" />
+            <img src={imageUrl} alt={title} className="w-full h-full object-contain drop-shadow-[4px_6px_8px_rgba(0,0,0,0.5)] group-hover:scale-105 transition-transform duration-500" />
           ) : (
             <div className="w-full h-full bg-border/20 rounded drop-shadow-xl" />
           )}

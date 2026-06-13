@@ -27,7 +27,7 @@ export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: Dhol
           <img
             src={imageUrl}
             alt={title}
-            className="relative z-30 w-full max-w-[80%] max-h-[170px] object-contain group-hover:-translate-y-4 transition-transform duration-500 ease-out mix-blend-multiply dark:mix-blend-normal drop-shadow-xl"
+            className="relative z-30 w-full max-w-[80%] max-h-[170px] object-contain group-hover:-translate-y-4 transition-transform duration-500 ease-out mix-blend-multiply dark:mix-blend-normal drop-shadow-[4px_6px_8px_rgba(0,0,0,0.5)]"
           />
 
           {/* 3D Pedestal using CSS Cylinder */}

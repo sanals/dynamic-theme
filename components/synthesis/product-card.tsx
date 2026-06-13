@@ -52,7 +52,7 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
         <img 
           src={imageUrl} 
           alt={title} 
-          className="relative z-10 w-full max-w-[85%] max-h-[100%] object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-500 mix-blend-multiply dark:mix-blend-normal"
+          className="relative z-10 w-full max-w-[85%] max-h-[100%] object-contain drop-shadow-[4px_6px_8px_rgba(0,0,0,0.5)] group-hover:scale-105 transition-transform duration-500 mix-blend-multiply dark:mix-blend-normal"
         />
       </div>
 
