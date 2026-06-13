@@ -11,8 +11,15 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
   // Use a shortened title for the large background text
   const bgText = title.split(' ')[0].toUpperCase()
 
+  // Vary the height of the image container to create the masonry tile feel
+  const imageHeight = featured 
+    ? "h-[260px] sm:h-[320px]" 
+    : (title.includes("Glove") || title.includes("Gear") || title.includes("Sphere") || title.includes("Cube"))
+      ? "h-[160px] sm:h-[190px]"
+      : "h-[190px] sm:h-[230px]"
+
   return (
-    <div className="group relative bg-card rounded-[1.25rem] shadow-xl shadow-foreground/5 overflow-hidden flex flex-col h-full transition-transform hover:-translate-y-1">
+    <div className="group relative bg-card rounded-[1.25rem] shadow-xl shadow-foreground/5 overflow-hidden flex flex-col transition-transform hover:-translate-y-1">
       
       {/* Top Navigation Bar inside the card */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10">
@@ -35,7 +42,7 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
       </div>
 
       {/* Image Area with Faded Background Text */}
-      <div className="relative flex-1 w-full flex items-center justify-center my-2 min-h-0">
+      <div className={`relative w-full flex items-center justify-center my-2 ${imageHeight}`}>
         {/* Faded Background Typography */}
         <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none z-0">
           <h2 className="text-[5rem] md:text-[6rem] font-black text-foreground/5 leading-none px-2 text-center break-words select-none">
