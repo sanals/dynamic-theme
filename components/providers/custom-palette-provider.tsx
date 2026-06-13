@@ -106,8 +106,8 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       --muted-foreground: ${customColors.foreground};
       --accent: ${customColors.primary};
       --accent-foreground: ${customColors.background};
-      --border: ${customColors.primary}; /* simplified for custom mode */
-      --input: ${customColors.primary};
+      --border: color-mix(in srgb, ${customColors.foreground} 12%, transparent);
+      --input: color-mix(in srgb, ${customColors.foreground} 18%, transparent);
       --ring: ${customColors.primary};
       
       --pedestal-glow: ${customColors.primary};

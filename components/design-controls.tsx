@@ -157,10 +157,56 @@ export function DesignControls() {
   }
 
   const handleCopyPalette = () => {
-    let paletteString = `${customColors.primary}, ${customColors.background}, ${customColors.card}, ${customColors.foreground}`
-    if (activeDesign === "dholeish") {
-      paletteString += `, ${customColors.pedestalTop}`
+    let paletteString = ""
+    
+    if (theme === "custom-palette") {
+      paletteString = `${customColors.primary}, ${customColors.background}, ${customColors.card}, ${customColors.foreground}`
+      if (activeDesign === "dholeish") {
+        paletteString += `, ${customColors.pedestalTop}`
+      }
+    } else {
+      // Read current computed colors directly from the browser
+      const testDiv = document.createElement("div")
+      document.body.appendChild(testDiv)
+      
+      const canvas = document.createElement("canvas")
+      canvas.width = 1
+      canvas.height = 1
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })
+      
+      const getHex = (cssClass: string) => {
+        testDiv.className = `fixed top-0 left-0 opacity-0 pointer-events-none ${cssClass}`
+        const color = getComputedStyle(testDiv).backgroundColor
+        
+        if (!ctx) return "#000000"
+        
+        ctx.clearRect(0, 0, 1, 1)
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        
+        const data = ctx.getImageData(0, 0, 1, 1).data
+        const r = data[0]
+        const g = data[1]
+        const b = data[2]
+        
+        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+      }
+
+      const primaryHex = getHex("bg-primary")
+      const backgroundHex = getHex("bg-background")
+      const cardHex = getHex("bg-card")
+      const foregroundHex = getHex("bg-foreground")
+      
+      paletteString = `${primaryHex}, ${backgroundHex}, ${cardHex}, ${foregroundHex}`
+      
+      if (activeDesign === "dholeish") {
+         const pedestalTopHex = getHex("bg-pedestal-top")
+         paletteString += `, ${pedestalTopHex}`
+      }
+
+      document.body.removeChild(testDiv)
     }
+
     navigator.clipboard.writeText(paletteString).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -195,50 +241,57 @@ export function DesignControls() {
         />
       )}
       
-      {mounted && theme === "custom-palette" && (
+      {mounted && (
         <div className="flex items-center gap-4 border-l border-border/50 pl-4 ml-1">
-          <DraggableColorPicker 
-            colorKey="primary" label="Accent" value={customColors.primary} 
-            onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors} 
-          />
-          <DraggableColorPicker 
-            colorKey="background" label="Bg" value={customColors.background} 
-            onChange={(v) => setCustomColor("background", v)} onSwap={swapColors} 
-          />
-          <DraggableColorPicker 
-            colorKey="card" label="Card" value={customColors.card} 
-            onChange={(v) => setCustomColor("card", v)} onSwap={swapColors} 
-          />
-          <DraggableColorPicker 
-            colorKey="foreground" label="Text" value={customColors.foreground} 
-            onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors} 
-          />
-          {activeDesign === "dholeish" && (
-            <DraggableColorPicker 
-              colorKey="pedestalTop" label="Pedestal" value={customColors.pedestalTop} 
-              onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 
-            />
+          {theme === "custom-palette" && (
+            <>
+              <DraggableColorPicker 
+                colorKey="primary" label="Accent" value={customColors.primary} 
+                onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="background" label="Bg" value={customColors.background} 
+                onChange={(v) => setCustomColor("background", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="card" label="Card" value={customColors.card} 
+                onChange={(v) => setCustomColor("card", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="foreground" label="Text" value={customColors.foreground} 
+                onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors} 
+              />
+              {activeDesign === "dholeish" && (
+                <DraggableColorPicker 
+                  colorKey="pedestalTop" label="Pedestal" value={customColors.pedestalTop} 
+                  onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 
+                />
+              )}
+              <div className="flex items-end gap-1.5 border-l border-border/50 pl-3 ml-1 h-full">
+                <input 
+                  type="text" 
+                  placeholder="Paste #colors..." 
+                  onChange={handleBulkPaste}
+                  className="h-6 w-28 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button 
+                  onClick={resetCustomColors} 
+                  title="Reset to default palette"
+                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCcw className="size-3.5" />
+                </button>
+              </div>
+            </>
           )}
-          <div className="flex items-end gap-1.5 border-l border-border/50 pl-3 ml-1 h-full">
-            <input 
-              type="text" 
-              placeholder="Paste #colors..." 
-              onChange={handleBulkPaste}
-              className="h-6 w-28 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+          
+          <div className="flex items-center h-full">
             <button 
               onClick={handleCopyPalette} 
-              title="Copy palette to clipboard"
+              title="Copy current palette to clipboard"
               className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
             >
               {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-            </button>
-            <button 
-              onClick={resetCustomColors} 
-              title="Reset to default palette"
-              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <RotateCcw className="size-3.5" />
             </button>
           </div>
         </div>
