@@ -15,7 +15,11 @@ export type CustomColors = {
   muted: string
   mutedForeground: string
   border: string
+  pedestalGlow: string
   pedestalTop: string
+  pedestalTopBorder: string
+  pedestalBody: string
+  pedestalShadow: string
 }
 
 const DEFAULT_CUSTOM_COLORS: CustomColors = {
@@ -30,7 +34,11 @@ const DEFAULT_CUSTOM_COLORS: CustomColors = {
   muted: "#27272a",      // zinc-800
   mutedForeground: "#a1a1aa", // zinc-400
   border: "#3f3f46",     // zinc-700
-  pedestalTop: "#3f3f46",// zinc-700
+  pedestalGlow: "#3b82f6",    // blue-500
+  pedestalTop: "#3f3f46",     // zinc-700
+  pedestalTopBorder: "#3b82f6", // blue-500
+  pedestalBody: "#27272a",    // zinc-800
+  pedestalShadow: "#000000",  // black
 }
 
 interface CustomPaletteContextValue {
@@ -85,7 +93,11 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       if (colors[8]) next.muted = colors[8]
       if (colors[9]) next.mutedForeground = colors[9]
       if (colors[10]) next.border = colors[10]
-      if (colors[11]) next.pedestalTop = colors[11]
+      if (colors[11]) next.pedestalGlow = colors[11]
+      if (colors[12]) next.pedestalTop = colors[12]
+      if (colors[13]) next.pedestalTopBorder = colors[13]
+      if (colors[14]) next.pedestalBody = colors[14]
+      if (colors[15]) next.pedestalShadow = colors[15]
       
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       return next
@@ -131,11 +143,11 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       --input: ${customColors.border};
       --ring: ${customColors.primary};
       
-      --pedestal-glow: ${customColors.primary};
+      --pedestal-glow: ${customColors.pedestalGlow};
       --pedestal-top: ${customColors.pedestalTop};
-      --pedestal-top-border: ${customColors.primary};
-      --pedestal-body: ${customColors.card};
-      --pedestal-shadow: #000000;
+      --pedestal-top-border: ${customColors.pedestalTopBorder};
+      --pedestal-body: ${customColors.pedestalBody};
+      --pedestal-shadow: ${customColors.pedestalShadow};
     }
   `
 

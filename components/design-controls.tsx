@@ -175,7 +175,7 @@ export function DesignControls() {
       ].join(", ")
       
       if (activeDesign === "dholeish" || activeDesign === "rakery") {
-        paletteString += `, ${customColors.pedestalTop}`
+        paletteString += `, ${customColors.pedestalGlow}, ${customColors.pedestalTop}, ${customColors.pedestalTopBorder}, ${customColors.pedestalBody}, ${customColors.pedestalShadow}`
       }
     } else {
       // Read current computed colors directly from the browser
@@ -262,8 +262,12 @@ export function DesignControls() {
       ].join(", ")
       
       if (activeDesign === "dholeish" || activeDesign === "rakery") {
-         const pedestalTopHex = getHex("bg-pedestal-top")
-         paletteString += `, ${pedestalTopHex}`
+         const glowHex = getHex("bg-pedestal-glow")
+         const topHex = getHex("bg-pedestal-top")
+         const topBorderHex = getHex("bg-pedestal-top-border")
+         const bodyHex = getHex("bg-pedestal-body")
+         const shadowHex = getHex("bg-pedestal-shadow")
+         paletteString += `, ${glowHex}, ${topHex}, ${topBorderHex}, ${bodyHex}, ${shadowHex}`
       }
 
       document.body.removeChild(testDiv)
@@ -352,10 +356,28 @@ export function DesignControls() {
                 onChange={(v) => setCustomColor("border", v)} onSwap={swapColors} 
               />
               {(activeDesign === "dholeish" || activeDesign === "rakery") && (
-                <DraggableColorPicker 
-                  colorKey="pedestalTop" label="Pedestal" value={customColors.pedestalTop} 
-                  onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 
-                />
+                <>
+                  <DraggableColorPicker 
+                    colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow} 
+                    onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors} 
+                  />
+                  <DraggableColorPicker 
+                    colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop} 
+                    onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 
+                  />
+                  <DraggableColorPicker 
+                    colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder} 
+                    onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors} 
+                  />
+                  <DraggableColorPicker 
+                    colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody} 
+                    onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors} 
+                  />
+                  <DraggableColorPicker 
+                    colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow} 
+                    onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors} 
+                  />
+                </>
               )}
               <div className="flex items-end gap-1.5 border-l border-border/50 pl-3 ml-1 h-full">
                 <input 
