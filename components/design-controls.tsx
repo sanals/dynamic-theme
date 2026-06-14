@@ -18,6 +18,104 @@ import { useCustomPalette, type CustomColors } from "@/components/providers/cust
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
 
+export interface Preset {
+  id: string
+  name: string
+  colors: CustomColors
+  isCustom?: boolean
+}
+
+export const BUILTIN_PRESETS: Preset[] = [
+  {
+    id: "sunset-glow",
+    name: "Sunset Glow",
+    colors: {
+      background: "#1e152a",
+      foreground: "#f7f4fb",
+      card: "#2c1e3d",
+      cardForeground: "#f7f4fb",
+      primary: "#ff6b6b",
+      primaryForeground: "#1e152a",
+      secondary: "#fca311",
+      secondaryForeground: "#1e152a",
+      muted: "#2c1e3d",
+      mutedForeground: "#bca0dc",
+      border: "#4b3269",
+      pedestalGlow: "#ff6b6b",
+      pedestalTop: "#3e275c",
+      pedestalTopBorder: "#ff6b6b",
+      pedestalBody: "#2c1e3d",
+      pedestalShadow: "#0d0614",
+    }
+  },
+  {
+    id: "cyberpunk-neon",
+    name: "Cyber Neon",
+    colors: {
+      background: "#0d0e15",
+      foreground: "#00f0ff",
+      card: "#151722",
+      cardForeground: "#ffffff",
+      primary: "#ff007f",
+      primaryForeground: "#ffffff",
+      secondary: "#00f0ff",
+      secondaryForeground: "#0d0e15",
+      muted: "#151722",
+      mutedForeground: "#787f9d",
+      border: "#ff007f",
+      pedestalGlow: "#ff007f",
+      pedestalTop: "#1c1e2d",
+      pedestalTopBorder: "#00f0ff",
+      pedestalBody: "#151722",
+      pedestalShadow: "#000000",
+    }
+  },
+  {
+    id: "nordic-winter",
+    name: "Nordic Ice",
+    colors: {
+      background: "#f0f4f8",
+      foreground: "#102a43",
+      card: "#ffffff",
+      cardForeground: "#102a43",
+      primary: "#486581",
+      primaryForeground: "#ffffff",
+      secondary: "#627d98",
+      secondaryForeground: "#ffffff",
+      muted: "#bcccdc",
+      mutedForeground: "#486581",
+      border: "#d9e2ec",
+      pedestalGlow: "#627d98",
+      pedestalTop: "#e1e8ed",
+      pedestalTopBorder: "#bcccdc",
+      pedestalBody: "#bcccdc",
+      pedestalShadow: "#102a4315",
+    }
+  },
+  {
+    id: "vintage-retro",
+    name: "Retro Warm",
+    colors: {
+      background: "#faf6ee",
+      foreground: "#2b2a27",
+      card: "#f4ede0",
+      cardForeground: "#2b2a27",
+      primary: "#d95d39",
+      primaryForeground: "#faf6ee",
+      secondary: "#f0a28e",
+      secondaryForeground: "#2b2a27",
+      muted: "#f4ede0",
+      mutedForeground: "#8c877d",
+      border: "#dfd5c2",
+      pedestalGlow: "#d95d39",
+      pedestalTop: "#ebe0cc",
+      pedestalTopBorder: "#d95d39",
+      pedestalBody: "#dfd5c2",
+      pedestalShadow: "#2b2a2712",
+    }
+  }
+]
+
 /*
   DESIGN CONTROLS
   ---------------
@@ -194,6 +292,70 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       ...prev,
       [key]: !prev[key],
     }))
+  }
+
+  const [presets, setPresets] = useState<Preset[]>(BUILTIN_PRESETS)
+  const [newPresetName, setNewPresetName] = useState("")
+  const [showSaveInput, setShowSaveInput] = useState(false)
+
+  // Load custom presets on mount
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("custom-palette-presets")
+      if (stored) {
+        const parsed = JSON.parse(stored) as Preset[]
+        setPresets([...BUILTIN_PRESETS, ...parsed])
+      }
+    } catch (e) {
+      console.error("Failed to load presets", e)
+    }
+  }, [])
+
+  const handleApplyPreset = (preset: Preset) => {
+    applyBulkColors([
+      preset.colors.background,
+      preset.colors.foreground,
+      preset.colors.card,
+      preset.colors.cardForeground,
+      preset.colors.primary,
+      preset.colors.primaryForeground,
+      preset.colors.secondary,
+      preset.colors.secondaryForeground,
+      preset.colors.muted,
+      preset.colors.mutedForeground,
+      preset.colors.border,
+      preset.colors.pedestalGlow,
+      preset.colors.pedestalTop,
+      preset.colors.pedestalTopBorder,
+      preset.colors.pedestalBody,
+      preset.colors.pedestalShadow,
+    ])
+  }
+
+  const handleSavePreset = () => {
+    if (!newPresetName.trim()) return
+    const newPreset: Preset = {
+      id: "custom-" + Date.now(),
+      name: newPresetName.trim(),
+      colors: { ...customColors },
+      isCustom: true,
+    }
+    const updatedPresets = [...presets, newPreset]
+    setPresets(updatedPresets)
+    
+    // Save only custom ones to localStorage
+    const customOnly = updatedPresets.filter(p => p.isCustom)
+    window.localStorage.setItem("custom-palette-presets", JSON.stringify(customOnly))
+
+    setNewPresetName("")
+    setShowSaveInput(false)
+  }
+
+  const handleDeletePreset = (id: string) => {
+    const updatedPresets = presets.filter(p => p.id !== id)
+    setPresets(updatedPresets)
+    const customOnly = updatedPresets.filter(p => p.isCustom)
+    window.localStorage.setItem("custom-palette-presets", JSON.stringify(customOnly))
   }
 
   const handleRandomizePalette = () => {
@@ -470,93 +632,179 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
         )}
       </div>
 
-      {/* Bottom Row: Color Pickers (only shown in custom mode) */}
+      {/* Bottom Row: Color Pickers and Presets (only shown in custom mode) */}
       {mounted && theme === "custom-palette" && (
-        <div className="flex flex-wrap items-center justify-center gap-4 border-t border-border/20 pt-3.5 w-full">
-          <DraggableColorPicker
-            colorKey="background" label="Bg" value={customColors.background}
-            onChange={(v) => setCustomColor("background", v)} onSwap={swapColors}
-            isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
-          />
-          <DraggableColorPicker
-            colorKey="foreground" label="Text" value={customColors.foreground}
-            onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors}
-            isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
-          />
-          <DraggableColorPicker
-            colorKey="card" label="Card" value={customColors.card}
-            onChange={(v) => setCustomColor("card", v)} onSwap={swapColors}
-            isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
-          />
-          <DraggableColorPicker
-            colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
-            onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors}
-            isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
-          />
-          <DraggableColorPicker
-            colorKey="primary" label="Accent" value={customColors.primary}
-            onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors}
-            isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
-          />
-          <DraggableColorPicker
-            colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
-            onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors}
-            isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
-          />
-          <DraggableColorPicker
-            colorKey="secondary" label="Sec" value={customColors.secondary}
-            onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors}
-            isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
-          />
-          <DraggableColorPicker
-            colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
-            onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors}
-            isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
-          />
-          <DraggableColorPicker
-            colorKey="muted" label="Muted" value={customColors.muted}
-            onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors}
-            isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
-          />
-          <DraggableColorPicker
-            colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
-            onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors}
-            isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
-          />
-          <DraggableColorPicker
-            colorKey="border" label="Border" value={customColors.border}
-            onChange={(v) => setCustomColor("border", v)} onSwap={swapColors}
-            isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
-          />
-          {(activeDesign === "dholeish" || activeDesign === "rakery") && (
-            <>
-              <DraggableColorPicker
-                colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
-                onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors}
-                isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
-              />
-              <DraggableColorPicker
-                colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
-                onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors}
-                isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
-              />
-              <DraggableColorPicker
-                colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder}
-                onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors}
-                isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
-              />
-              <DraggableColorPicker
-                colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
-                onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors}
-                isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
-              />
-              <DraggableColorPicker
-                colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow}
-                onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors}
-                isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
-              />
-            </>
-          )}
+        <div className="flex flex-col gap-3.5 border-t border-border/20 pt-3.5 w-full">
+          {/* Presets Library */}
+          <div className="flex flex-col gap-2 w-full px-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Palette Presets</span>
+              {!showSaveInput ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSaveInput(true)}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  + Save Current
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={newPresetName}
+                    onChange={(e) => setNewPresetName(e.target.value)}
+                    placeholder="Preset name..."
+                    className="h-5 text-[10px] bg-black/40 border border-white/10 rounded px-1.5 w-24 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSavePreset()
+                      if (e.key === "Escape") {
+                        setShowSaveInput(false)
+                        setNewPresetName("")
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSavePreset}
+                    className="h-5 px-2 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSaveInput(false)
+                      setNewPresetName("")
+                    }}
+                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar scroll-smooth w-full">
+              {presets.map((preset) => (
+                <div
+                  key={preset.id}
+                  className="group/preset relative flex items-center gap-1.5 shrink-0 rounded-full border border-white/10 bg-black/20 pl-2 pr-1.5 py-0.5 hover:bg-black/40 hover:border-white/20 transition-all"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset(preset)}
+                    className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {/* 4 dots for preview */}
+                    <div className="flex -space-x-1 shrink-0">
+                      <span className="size-2 rounded-full border border-black/20" style={{ backgroundColor: preset.colors.background }} />
+                      <span className="size-2 rounded-full border border-black/20" style={{ backgroundColor: preset.colors.primary }} />
+                      <span className="size-2 rounded-full border border-black/20" style={{ backgroundColor: preset.colors.secondary }} />
+                      <span className="size-2 rounded-full border border-black/20" style={{ backgroundColor: preset.colors.foreground }} />
+                    </div>
+                    <span>{preset.name}</span>
+                  </button>
+                  {preset.isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePreset(preset.id)}
+                      title="Delete preset"
+                      className="text-muted-foreground hover:text-red-400 text-xs ml-0.5 leading-none transition-colors"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Swatch Pickers Grid */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-1 w-full">
+            <DraggableColorPicker
+              colorKey="background" label="Bg" value={customColors.background}
+              onChange={(v) => setCustomColor("background", v)} onSwap={swapColors}
+              isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
+            />
+            <DraggableColorPicker
+              colorKey="foreground" label="Text" value={customColors.foreground}
+              onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors}
+              isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
+            />
+            <DraggableColorPicker
+              colorKey="card" label="Card" value={customColors.card}
+              onChange={(v) => setCustomColor("card", v)} onSwap={swapColors}
+              isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
+            />
+            <DraggableColorPicker
+              colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
+              onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors}
+              isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
+            />
+            <DraggableColorPicker
+              colorKey="primary" label="Accent" value={customColors.primary}
+              onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors}
+              isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
+            />
+            <DraggableColorPicker
+              colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
+              onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors}
+              isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
+            />
+            <DraggableColorPicker
+              colorKey="secondary" label="Sec" value={customColors.secondary}
+              onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors}
+              isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
+            />
+            <DraggableColorPicker
+              colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
+              onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors}
+              isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
+            />
+            <DraggableColorPicker
+              colorKey="muted" label="Muted" value={customColors.muted}
+              onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors}
+              isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
+            />
+            <DraggableColorPicker
+              colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
+              onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors}
+              isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
+            />
+            <DraggableColorPicker
+              colorKey="border" label="Border" value={customColors.border}
+              onChange={(v) => setCustomColor("border", v)} onSwap={swapColors}
+              isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
+            />
+            {(activeDesign === "dholeish" || activeDesign === "rakery") && (
+              <>
+                <DraggableColorPicker
+                  colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
+                  onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors}
+                  isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
+                />
+                <DraggableColorPicker
+                  colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
+                  onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors}
+                  isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
+                />
+                <DraggableColorPicker
+                  colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder}
+                  onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors}
+                  isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
+                />
+                <DraggableColorPicker
+                  colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
+                  onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors}
+                  isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
+                />
+                <DraggableColorPicker
+                  colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow}
+                  onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors}
+                  isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
+                />
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
