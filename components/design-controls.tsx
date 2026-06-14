@@ -20,6 +20,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
+import { getContrastInfo } from "@/lib/color-utils"
 
 export interface Preset {
   id: string
@@ -928,6 +929,110 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 />
               </>
             )}
+          </div>
+
+          {/* Contrast Accessibility Checker */}
+          <div className="flex flex-col gap-2 border-t border-border/20 pt-3.5 w-full px-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contrast Accessibility (WCAG 2.1)</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full">
+              {[
+                {
+                  label: "Main Body",
+                  bgKey: "background" as keyof CustomColors,
+                  fgKey: "foreground" as keyof CustomColors,
+                },
+                {
+                  label: "Card Content",
+                  bgKey: "card" as keyof CustomColors,
+                  fgKey: "cardForeground" as keyof CustomColors,
+                },
+                {
+                  label: "Accent Button",
+                  bgKey: "primary" as keyof CustomColors,
+                  fgKey: "primaryForeground" as keyof CustomColors,
+                },
+                {
+                  label: "Muted Text",
+                  bgKey: "muted" as keyof CustomColors,
+                  fgKey: "mutedForeground" as keyof CustomColors,
+                },
+              ].map((pair) => {
+                const bg = customColors[pair.bgKey] || "#000000"
+                const fg = customColors[pair.fgKey] || "#ffffff"
+                const info = getContrastInfo(bg, fg)
+                
+                // Color coding for levels
+                let levelBadgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                if (info.level === "AAA") {
+                  levelBadgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                } else if (info.level === "AA") {
+                  levelBadgeClass = "bg-teal-500/10 text-teal-400 border border-teal-500/20"
+                } else if (info.level === "AA Large") {
+                  levelBadgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                }
+
+                // Tooltip text explanations and recommendations
+                let tooltipTitle = ""
+                let tooltipDesc = ""
+                let tooltipAction = ""
+
+                if (info.level === "AAA") {
+                  tooltipTitle = "AAA - Enhanced Contrast (≥ 7.0:1)"
+                  tooltipDesc = "Excellent readability. Reads perfectly for all text sizes and users."
+                  tooltipAction = "No action needed. Outstanding accessibility!"
+                } else if (info.level === "AA") {
+                  tooltipTitle = "AA - Minimum Contrast (≥ 4.5:1)"
+                  tooltipDesc = "Standard compliant. Good for body text and headings."
+                  tooltipAction = "To meet enhanced AAA standards, increase contrast further."
+                } else if (info.level === "AA Large") {
+                  tooltipTitle = "AA Large - Large Text Only (≥ 3.0:1)"
+                  tooltipDesc = "Readable only for large text (18px+) or bold headers."
+                  tooltipAction = "Action: Make text darker or background lighter to pass for body text."
+                } else {
+                  tooltipTitle = "Fail - Insufficient Contrast (< 3.0:1)"
+                  tooltipDesc = "Hard to read. Does not meet WCAG readability guidelines."
+                  tooltipAction = "Action: Adjust colors to increase contrast ratio to at least 4.5:1."
+                }
+
+                return (
+                  <div 
+                    key={pair.label}
+                    className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/15 p-2"
+                  >
+                    <div 
+                      className="size-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 border border-white/10 select-none shadow-inner"
+                      style={{ backgroundColor: bg, color: fg }}
+                    >
+                      Aa
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-medium text-muted-foreground truncate leading-none mb-1">
+                        {pair.label}
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-mono font-bold leading-none text-foreground">
+                          {info.ratio.toFixed(1)}:1
+                        </span>
+                        
+                        <div className="relative group/tooltip">
+                          <span className={cn("text-[9px] font-black uppercase px-1 py-0.5 rounded leading-none shrink-0 tracking-wider cursor-help", levelBadgeClass)}>
+                            {info.level}
+                          </span>
+                          
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
+                            <span className="font-bold text-white leading-tight">{tooltipTitle}</span>
+                            <span className="text-zinc-400 leading-normal">{tooltipDesc}</span>
+                            <span className="text-primary font-semibold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
