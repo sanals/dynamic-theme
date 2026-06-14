@@ -21,6 +21,8 @@
 /* 1. TOP-LEVEL DESIGN AXIS                                         */
 /* ---------------------------------------------------------------- */
 
+import { FontPairingId } from "./font-config"
+
 export type DesignId = "rakery" | "h2n" | "synthesis" | "dholeish"
 
 export interface DesignOption {
@@ -29,6 +31,8 @@ export interface DesignOption {
   description: string
   /** Palette applied automatically when this design becomes active. */
   defaultPalette: ColorPalette
+  /** Font applied automatically when this design becomes active. */
+  defaultFont: FontPairingId
 }
 
 export const designs: DesignOption[] = [
@@ -37,24 +41,28 @@ export const designs: DesignOption[] = [
     label: "Rakery",
     description: "Warm luxe storefront with an orange accent.",
     defaultPalette: "design-variant-1",
+    defaultFont: "inter",
   },
   {
     id: "h2n",
     label: "H2N",
     description: "Industrial steel-blue catalog with condensed type.",
     defaultPalette: "design-variant-3",
+    defaultFont: "roboto-mono",
   },
   {
     id: "synthesis",
     label: "Synthesis",
     description: "Futuristic bionic minimal catalog with ultra-clean elements.",
     defaultPalette: "design-variant-5",
+    defaultFont: "geist",
   },
   {
     id: "dholeish",
     label: "Dholeish",
     description: "Forest green glassmorphic aesthetic with pedestals.",
     defaultPalette: "design-variant-7",
+    defaultFont: "playfair",
   },
 ]
 

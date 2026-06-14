@@ -17,6 +17,7 @@ import { DEFAULT_PALETTE, allPaletteIds } from "@/lib/design-config"
 import { LayoutProvider } from "@/components/providers/layout-provider"
 import { DesignProvider } from "@/components/providers/design-provider"
 import { CustomPaletteProvider } from "@/components/providers/custom-palette-provider"
+import { FontProvider } from "@/components/providers/font-provider"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -28,7 +29,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <CustomPaletteProvider>
         <DesignProvider>
-          <LayoutProvider>{children}</LayoutProvider>
+          <FontProvider>
+            <LayoutProvider>{children}</LayoutProvider>
+          </FontProvider>
         </DesignProvider>
       </CustomPaletteProvider>
     </ThemeProvider>

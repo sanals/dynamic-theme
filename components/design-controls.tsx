@@ -1,9 +1,9 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -15,6 +15,8 @@ import {
 } from "@/lib/design-config"
 import { useDesign } from "@/components/providers/design-provider"
 import { useLayoutStructure } from "@/components/providers/layout-provider"
+import { useFont } from "@/components/providers/font-provider"
+import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
@@ -272,9 +274,11 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { theme, setTheme } = useTheme()
   const { activeLayoutStructure, setLayoutStructure } = useLayoutStructure()
   const { activeDesign, setDesign } = useDesign()
+  const { activeFont, setFont, setCustomFont } = useFont()
   const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors } = useCustomPalette()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [lastDefaultPalettes, setLastDefaultPalettes] = useState<Record<DesignId, ColorPalette>>({
     rakery: "design-variant-1",
@@ -638,6 +642,42 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             value={activeLayoutStructure}
             onChange={setLayoutStructure}
           />
+        )}
+        <Segmented<FontPairingId>
+          label="Font"
+          icon={<Type className="size-3.5" aria-hidden />}
+          options={Object.values(fontPairings)}
+          value={mounted ? activeFont : undefined}
+          onChange={setFont}
+        />
+        {activeFont === "custom" && (
+          <div className="relative">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="cursor-pointer h-7 flex items-center gap-1.5 px-2 rounded bg-primary/20 hover:bg-primary/30 border border-primary/30 transition-colors text-xs font-medium text-primary-foreground"
+            >
+              <Upload className="size-3.5" />
+              Upload Font
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".woff2,.ttf,.otf"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                try {
+                  const familyName = `CustomFont_${Date.now()}`
+                  await setCustomFont(file, familyName)
+                } catch (err) {
+                  console.error(err)
+                }
+                // clear the input so same file can be uploaded again if needed
+                e.target.value = ""
+              }}
+            />
+          </div>
         )}
 
         {mounted && (
