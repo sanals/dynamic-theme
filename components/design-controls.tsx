@@ -2,7 +2,8 @@
 
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle } from "lucide-react"
+import { createPortal } from "react-dom"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -297,6 +298,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [presets, setPresets] = useState<Preset[]>(BUILTIN_PRESETS)
   const [newPresetName, setNewPresetName] = useState("")
   const [showSaveInput, setShowSaveInput] = useState(false)
+  const [presetError, setPresetError] = useState<string | null>(null)
 
   // Load custom presets on mount
   useEffect(() => {
@@ -333,10 +335,38 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   }
 
   const handleSavePreset = () => {
-    if (!newPresetName.trim()) return
+    const trimmedName = newPresetName.trim()
+    if (!trimmedName) return
+
+    // 1. Check duplicate name (case-insensitive)
+    const nameExists = presets.some(p => p.name.toLowerCase() === trimmedName.toLowerCase())
+    if (nameExists) {
+      setPresetError("Name already exists")
+      setTimeout(() => setPresetError(null), 3000)
+      return
+    }
+
+    // 2. Check duplicate color palette (comparing core 11 colors)
+    const colorExists = presets.find(p => {
+      const keysToCompare: (keyof CustomColors)[] = [
+        "background", "foreground", "card", "cardForeground",
+        "primary", "primaryForeground", "secondary", "secondaryForeground",
+        "muted", "mutedForeground", "border"
+      ]
+      return keysToCompare.every(key => p.colors[key] === customColors[key])
+    })
+    
+    if (colorExists) {
+      setPresetError(`Same colors as "${colorExists.name}"`)
+      setTimeout(() => setPresetError(null), 3000)
+      return
+    }
+
+    setPresetError(null)
+
     const newPreset: Preset = {
       id: "custom-" + Date.now(),
-      name: newPresetName.trim(),
+      name: trimmedName,
       colors: { ...customColors },
       isCustom: true,
     }
@@ -414,122 +444,109 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     }
   }
 
-  const handleCopyPalette = () => {
-    let paletteString = ""
-
+  const getActiveColors = (): CustomColors => {
     if (theme === "custom-palette") {
-      paletteString = [
-        customColors.background,
-        customColors.foreground,
-        customColors.card,
-        customColors.cardForeground,
-        customColors.primary,
-        customColors.primaryForeground,
-        customColors.secondary,
-        customColors.secondaryForeground,
-        customColors.muted,
-        customColors.mutedForeground,
-        customColors.border,
-      ].join(", ")
+      return customColors
+    }
 
-      if (activeDesign === "dholeish" || activeDesign === "rakery") {
-        paletteString += `, ${customColors.pedestalGlow}, ${customColors.pedestalTop}, ${customColors.pedestalTopBorder}, ${customColors.pedestalBody}, ${customColors.pedestalShadow}`
+    const testDiv = document.createElement("div")
+    testDiv.setAttribute("data-no-transition", "")
+    document.body.appendChild(testDiv)
+
+    const canvas = document.createElement("canvas")
+    canvas.width = 1
+    canvas.height = 1
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })
+
+    const getHex = (cssClass: string) => {
+      testDiv.className = `fixed top-0 left-0 opacity-0 pointer-events-none ${cssClass}`
+      const color = getComputedStyle(testDiv).backgroundColor
+
+      if (!ctx) return "#000000"
+
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = color
+      ctx.fillRect(0, 0, 1, 1)
+
+      const data = ctx.getImageData(0, 0, 1, 1).data
+      const r = data[0]
+      const g = data[1]
+      const b = data[2]
+      const a = data[3]
+
+      const baseHex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+      if (a < 255) {
+        const alphaHex = a.toString(16).padStart(2, "0").toUpperCase()
+        return baseHex + alphaHex
       }
-    } else {
-      // Read current computed colors directly from the browser
-      const testDiv = document.createElement("div")
-      testDiv.setAttribute("data-no-transition", "")
-      document.body.appendChild(testDiv)
+      return baseHex
+    }
 
-      const canvas = document.createElement("canvas")
-      canvas.width = 1
-      canvas.height = 1
-      const ctx = canvas.getContext("2d", { willReadFrequently: true })
+    const getHexBorder = (cssClass: string) => {
+      testDiv.className = `fixed top-0 left-0 opacity-0 pointer-events-none border ${cssClass}`
+      const color = getComputedStyle(testDiv).borderTopColor
 
-      const getHex = (cssClass: string) => {
-        testDiv.className = `fixed top-0 left-0 opacity-0 pointer-events-none ${cssClass}`
-        const color = getComputedStyle(testDiv).backgroundColor
+      if (!ctx) return "#000000"
 
-        if (!ctx) return "#000000"
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = color
+      ctx.fillRect(0, 0, 1, 1)
 
-        ctx.clearRect(0, 0, 1, 1)
-        ctx.fillStyle = color
-        ctx.fillRect(0, 0, 1, 1)
+      const data = ctx.getImageData(0, 0, 1, 1).data
+      const r = data[0]
+      const g = data[1]
+      const b = data[2]
+      const a = data[3]
 
-        const data = ctx.getImageData(0, 0, 1, 1).data
-        const r = data[0]
-        const g = data[1]
-        const b = data[2]
-        const a = data[3]
-
-        const baseHex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
-        if (a < 255) {
-          const alphaHex = a.toString(16).padStart(2, "0").toUpperCase()
-          return baseHex + alphaHex
-        }
-        return baseHex
+      const baseHex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+      if (a < 255) {
+        const alphaHex = a.toString(16).padStart(2, "0").toUpperCase()
+        return baseHex + alphaHex
       }
+      return baseHex
+    }
 
-      const getHexBorder = (cssClass: string) => {
-        testDiv.className = `fixed top-0 left-0 opacity-0 pointer-events-none border ${cssClass}`
-        const color = getComputedStyle(testDiv).borderTopColor
+    const colors: CustomColors = {
+      background: getHex("bg-background"),
+      foreground: getHex("bg-foreground"),
+      card: getHex("bg-card"),
+      cardForeground: getHex("bg-card-foreground"),
+      primary: getHex("bg-primary"),
+      primaryForeground: getHex("bg-primary-foreground"),
+      secondary: getHex("bg-secondary"),
+      secondaryForeground: getHex("bg-secondary-foreground"),
+      muted: getHex("bg-muted"),
+      mutedForeground: getHex("bg-muted-foreground"),
+      border: getHexBorder("border-border"),
+      pedestalGlow: getHex("bg-pedestal-glow"),
+      pedestalTop: getHex("bg-pedestal-top"),
+      pedestalTopBorder: getHex("bg-pedestal-top-border"),
+      pedestalBody: getHex("bg-pedestal-body"),
+      pedestalShadow: getHex("bg-pedestal-shadow"),
+    }
 
-        if (!ctx) return "#000000"
+    document.body.removeChild(testDiv)
+    return colors
+  }
 
-        ctx.clearRect(0, 0, 1, 1)
-        ctx.fillStyle = color
-        ctx.fillRect(0, 0, 1, 1)
+  const handleCopyPalette = () => {
+    const c = getActiveColors()
+    let paletteString = [
+      c.background,
+      c.foreground,
+      c.card,
+      c.cardForeground,
+      c.primary,
+      c.primaryForeground,
+      c.secondary,
+      c.secondaryForeground,
+      c.muted,
+      c.mutedForeground,
+      c.border,
+    ].join(", ")
 
-        const data = ctx.getImageData(0, 0, 1, 1).data
-        const r = data[0]
-        const g = data[1]
-        const b = data[2]
-        const a = data[3]
-
-        const baseHex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
-        if (a < 255) {
-          const alphaHex = a.toString(16).padStart(2, "0").toUpperCase()
-          return baseHex + alphaHex
-        }
-        return baseHex
-      }
-
-      const bgHex = getHex("bg-background")
-      const fgHex = getHex("bg-foreground")
-      const cardHex = getHex("bg-card")
-      const cardFgHex = getHex("bg-card-foreground")
-      const primaryHex = getHex("bg-primary")
-      const primaryFgHex = getHex("bg-primary-foreground")
-      const secondaryHex = getHex("bg-secondary")
-      const secondaryFgHex = getHex("bg-secondary-foreground")
-      const mutedHex = getHex("bg-muted")
-      const mutedFgHex = getHex("bg-muted-foreground")
-      const borderHexVal = getHexBorder("border-border")
-
-      paletteString = [
-        bgHex,
-        fgHex,
-        cardHex,
-        cardFgHex,
-        primaryHex,
-        primaryFgHex,
-        secondaryHex,
-        secondaryFgHex,
-        mutedHex,
-        mutedFgHex,
-        borderHexVal
-      ].join(", ")
-
-      if (activeDesign === "dholeish" || activeDesign === "rakery") {
-        const glowHex = getHex("bg-pedestal-glow")
-        const topHex = getHex("bg-pedestal-top")
-        const topBorderHex = getHex("bg-pedestal-top-border")
-        const bodyHex = getHex("bg-pedestal-body")
-        const shadowHex = getHex("bg-pedestal-shadow")
-        paletteString += `, ${glowHex}, ${topHex}, ${topBorderHex}, ${bodyHex}, ${shadowHex}`
-      }
-
-      document.body.removeChild(testDiv)
+    if (activeDesign === "dholeish" || activeDesign === "rakery") {
+      paletteString += `, ${c.pedestalGlow}, ${c.pedestalTop}, ${c.pedestalTopBorder}, ${c.pedestalBody}, ${c.pedestalShadow}`
     }
 
     navigator.clipboard.writeText(paletteString).then(() => {
@@ -538,8 +555,56 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     })
   }
 
+  // Export Modal states & handlers
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportTab, setExportTab] = useState<"css" | "json">("css")
+  const [exportCopied, setExportCopied] = useState(false)
+
+  const getCssExport = () => {
+    const c = getActiveColors()
+    return `:root {
+  --background: ${c.background};
+  --foreground: ${c.foreground};
+  --card: ${c.card};
+  --card-foreground: ${c.cardForeground};
+  --popover: ${c.card};
+  --popover-foreground: ${c.foreground};
+  --primary: ${c.primary};
+  --primary-foreground: ${c.primaryForeground};
+  --secondary: ${c.secondary};
+  --secondary-foreground: ${c.secondaryForeground};
+  --muted: ${c.muted};
+  --muted-foreground: ${c.mutedForeground};
+  --accent: ${c.primary};
+  --accent-foreground: ${c.primaryForeground};
+  --border: ${c.border};
+  --input: ${c.border};
+  --ring: ${c.primary};
+  
+  /* Pedestal variables */
+  --pedestal-glow: ${c.pedestalGlow};
+  --pedestal-top: ${c.pedestalTop};
+  --pedestal-top-border: ${c.pedestalTopBorder};
+  --pedestal-body: ${c.pedestalBody};
+  --pedestal-shadow: ${c.pedestalShadow};
+}`
+  }
+
+  const getJsonExport = () => {
+    const c = getActiveColors()
+    return JSON.stringify(c, null, 2)
+  }
+
+  const handleCopyExport = () => {
+    const text = exportTab === "css" ? getCssExport() : getJsonExport()
+    navigator.clipboard.writeText(text).then(() => {
+      setExportCopied(true)
+      setTimeout(() => setExportCopied(false), 2000)
+    })
+  }
+
   return (
-    <div className="flex flex-col gap-3.5 items-center w-full">
+    <div className="relative flex flex-col gap-3.5 items-center w-full">
       {/* Top Row: Selectors + Actions */}
       <div className="flex flex-wrap items-center justify-center gap-3 w-full">
         <Segmented<DesignId>
@@ -622,6 +687,16 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
             </button>
             <button
+              onClick={() => {
+                setShowExportModal(true)
+                setExportCopied(false)
+              }}
+              title="Export theme as CSS/JSON"
+              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Download className="size-3.5" />
+            </button>
+            <button
               onClick={onMinimize}
               title="Minimize panel"
               className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
@@ -648,38 +723,47 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   + Save Current
                 </button>
               ) : (
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    value={newPresetName}
-                    onChange={(e) => setNewPresetName(e.target.value)}
-                    placeholder="Preset name..."
-                    className="h-5 text-[10px] bg-black/40 border border-white/10 rounded px-1.5 w-24 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSavePreset()
-                      if (e.key === "Escape") {
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={newPresetName}
+                      onChange={(e) => setNewPresetName(e.target.value)}
+                      placeholder="Preset name..."
+                      className="h-5 text-[10px] bg-black/40 border border-white/10 rounded px-1.5 w-24 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSavePreset()
+                        if (e.key === "Escape") {
+                          setShowSaveInput(false)
+                          setNewPresetName("")
+                          setPresetError(null)
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSavePreset}
+                      className="h-5 px-2 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setShowSaveInput(false)
                         setNewPresetName("")
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSavePreset}
-                    className="h-5 px-2 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSaveInput(false)
-                      setNewPresetName("")
-                    }}
-                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1"
-                  >
-                    Cancel
-                  </button>
+                        setPresetError(null)
+                      }}
+                      className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {presetError && (
+                    <span className="text-[9px] text-red-400 font-medium animate-pulse pr-1">
+                      {presetError}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -806,6 +890,80 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             )}
           </div>
         </div>
+      )}
+
+      {mounted && showExportModal && createPortal(
+        <div 
+          onPointerDown={(e) => e.stopPropagation()}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] animate-in fade-in duration-200"
+        >
+          <div className="bg-background/95 border border-white/10 rounded-2xl p-5 w-full max-w-lg mx-4 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Download className="size-4 text-primary" />
+                Export Theme Configuration
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 bg-black/35 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setExportTab("css")}
+                className={cn(
+                  "flex-1 text-xs font-semibold py-1.5 rounded-md transition-all",
+                  exportTab === "css" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                CSS Variables
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportTab("json")}
+                className={cn(
+                  "flex-1 text-xs font-semibold py-1.5 rounded-md transition-all",
+                  exportTab === "json" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                JSON Config
+              </button>
+            </div>
+
+            {/* Code Viewer */}
+            <div className="relative bg-black/45 border border-white/5 rounded-lg overflow-hidden flex flex-col h-64">
+              <textarea
+                readOnly
+                value={exportTab === "css" ? getCssExport() : getJsonExport()}
+                className="flex-1 w-full bg-transparent p-4 pr-16 text-xs font-mono text-foreground focus:outline-none resize-none overflow-y-auto leading-relaxed scrollbar-thin"
+              />
+              <button
+                type="button"
+                onClick={handleCopyExport}
+                className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded bg-black/80 hover:bg-black/90 border border-white/10 transition-colors text-xs font-medium text-foreground shadow-md"
+              >
+                {exportCopied ? (
+                  <>
+                    <Check className="size-3.5 text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-3.5 text-muted-foreground" />
+                    Copy Code
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   )
