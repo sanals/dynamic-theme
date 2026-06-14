@@ -20,6 +20,7 @@ export function GlobalDesignWidget() {
   const dragStartMouse = useRef({ x: 0, y: 0 })
   const dragStartPos = useRef({ x: 0, y: 0 })
   const clickStart = useRef({ x: 0, y: 0, time: 0 })
+  const widgetSize = useRef({ width: 0, height: 0 })
 
   // Hydrate from localStorage
   useEffect(() => {
@@ -86,11 +87,13 @@ export function GlobalDesignWidget() {
     e.preventDefault() // Prevent text selection
     setIsDragging(true)
     
-    // If pos is null (default centered), calculate its current absolute pos
+    // Calculate current absolute pos and cache dimensions
+    const rect = widgetRef.current!.getBoundingClientRect()
+    widgetSize.current = { width: rect.width, height: rect.height }
+
     let currentX = pos?.x
     let currentY = pos?.y
     if (currentX === undefined || currentY === undefined) {
-      const rect = widgetRef.current!.getBoundingClientRect()
       currentX = rect.left
       currentY = rect.top
       setPos({ x: currentX, y: currentY })
@@ -112,10 +115,9 @@ export function GlobalDesignWidget() {
     let newX = dragStartPos.current.x + dx
     let newY = dragStartPos.current.y + dy
     
-    // Bounds checking during drag
-    const rect = widgetRef.current.getBoundingClientRect()
-    const maxX = window.innerWidth - rect.width
-    const maxY = window.innerHeight - rect.height
+    // Bounds checking during drag using cached dimensions (NO REFLOW!)
+    const maxX = window.innerWidth - widgetSize.current.width
+    const maxY = window.innerHeight - widgetSize.current.height
     
     newX = Math.max(0, Math.min(newX, maxX))
     newY = Math.max(0, Math.min(newY, maxY))
@@ -149,7 +151,11 @@ export function GlobalDesignWidget() {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      style={pos ? { left: pos.x, top: pos.y } : undefined}
+      style={pos ? { 
+        left: pos.x, 
+        top: pos.y,
+        transition: isDragging ? "none" : undefined
+      } : undefined}
       className={cn(
         "fixed z-[100] shadow-2xl transition-all duration-200 ease-out",
         !pos && "bottom-6 left-1/2 -translate-x-1/2",
