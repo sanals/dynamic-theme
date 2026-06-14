@@ -157,7 +157,7 @@ export function GlobalDesignWidget() {
         transition: isDragging ? "none" : undefined
       } : undefined}
       className={cn(
-        "fixed z-[100] shadow-2xl transition-all duration-200 ease-out",
+        "fixed z-[100] shadow-2xl transition-[background-color,border-color,box-shadow,transform] duration-200 ease-out",
         !pos && "bottom-6 left-1/2 -translate-x-1/2",
         isDragging && "transition-none select-none",
         isMinimized 
@@ -166,9 +166,11 @@ export function GlobalDesignWidget() {
       )}
     >
       {isMinimized ? (
-        <Palette className="size-6 pointer-events-none text-white" />
+        <div className="animate-in fade-in zoom-in-90 duration-200">
+          <Palette className="size-6 pointer-events-none text-white" />
+        </div>
       ) : (
-        <div className="overflow-x-auto overflow-y-hidden no-scrollbar max-w-[90vw] w-fit pr-2">
+        <div className="overflow-x-auto overflow-y-hidden no-scrollbar max-w-[90vw] w-fit pr-2 animate-in fade-in zoom-in-95 duration-200">
           <DesignControls onMinimize={() => setIsMinimized(true)} />
         </div>
       )}
