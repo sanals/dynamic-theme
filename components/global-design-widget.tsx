@@ -22,6 +22,9 @@ export function GlobalDesignWidget() {
   const clickStart = useRef({ x: 0, y: 0, time: 0 })
   const widgetSize = useRef({ width: 0, height: 0 })
 
+  const isDraggingRef = useRef(false)
+  const currentPosRef = useRef<WidgetPos | null>(null)
+
   // Hydrate from localStorage
   useEffect(() => {
     setMounted(true)
@@ -30,7 +33,10 @@ export function GlobalDesignWidget() {
       if (stored) {
         const state = JSON.parse(stored)
         if (state.isMinimized !== undefined) setIsMinimized(state.isMinimized)
-        if (state.pos) setPos(state.pos)
+        if (state.pos) {
+          setPos(state.pos)
+          currentPosRef.current = state.pos
+        }
       }
     } catch (e) {
       console.error("Failed to load widget state", e)
@@ -57,7 +63,9 @@ export function GlobalDesignWidget() {
       const newY = Math.max(0, Math.min(pos.y, maxY))
       
       if (newX !== pos.x || newY !== pos.y) {
-        setPos({ x: newX, y: newY })
+        const newPos = { x: newX, y: newY }
+        setPos(newPos)
+        currentPosRef.current = newPos
       }
     }
     
@@ -85,6 +93,7 @@ export function GlobalDesignWidget() {
     }
 
     e.preventDefault() // Prevent text selection
+    isDraggingRef.current = true
     setIsDragging(true)
     
     // Calculate current absolute pos and cache dimensions
@@ -96,18 +105,22 @@ export function GlobalDesignWidget() {
     if (currentX === undefined || currentY === undefined) {
       currentX = rect.left
       currentY = rect.top
-      setPos({ x: currentX, y: currentY })
+      const initialPos = { x: currentX, y: currentY }
+      setPos(initialPos)
+      currentPosRef.current = initialPos
     }
 
     dragStartMouse.current = { x: e.clientX, y: e.clientY }
     dragStartPos.current = { x: currentX, y: currentY }
     clickStart.current = { x: e.clientX, y: e.clientY, time: Date.now() }
     
-    target.setPointerCapture(e.pointerId)
+    if (widgetRef.current) {
+      widgetRef.current.setPointerCapture(e.pointerId)
+    }
   }
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging || !widgetRef.current) return
+    if (!isDraggingRef.current || !widgetRef.current) return
     
     const dx = e.clientX - dragStartMouse.current.x
     const dy = e.clientY - dragStartMouse.current.y
@@ -122,15 +135,22 @@ export function GlobalDesignWidget() {
     newX = Math.max(0, Math.min(newX, maxX))
     newY = Math.max(0, Math.min(newY, maxY))
     
-    setPos({ x: newX, y: newY })
+    currentPosRef.current = { x: newX, y: newY }
+    widgetRef.current.style.left = `${newX}px`
+    widgetRef.current.style.top = `${newY}px`
   }
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return
+    if (!isDraggingRef.current) return
+    isDraggingRef.current = false
     setIsDragging(false)
-    const target = e.target as HTMLElement
-    if (target.hasPointerCapture(e.pointerId)) {
-      target.releasePointerCapture(e.pointerId)
+    
+    if (widgetRef.current && widgetRef.current.hasPointerCapture(e.pointerId)) {
+      widgetRef.current.releasePointerCapture(e.pointerId)
+    }
+
+    if (currentPosRef.current) {
+      setPos(currentPosRef.current)
     }
 
     // Detect click vs drag on the minimized pill
