@@ -117,7 +117,7 @@ function DraggableColorPicker({
       </button>
       <input
         type="color"
-        value={value}
+        value={value.slice(0, 7)}
         onChange={(e) => onChange(e.target.value)}
         className="size-6 cursor-pointer border-0 p-0 rounded-md overflow-hidden pointer-events-auto"
       />
@@ -146,10 +146,10 @@ export function DesignControls() {
 
   const handleBulkPaste = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
-    // Regex for 3 or 6 digit hex colors
-    const regex = /#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})\b/g
+    // Regex for 8, 6 or 3 digit hex colors
+    const regex = /#([a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{3})\b/g
     const matches = text.match(regex)
-    if (matches && matches.length >= 4) {
+    if (matches && matches.length >= 11) {
       applyBulkColors(matches)
       // Clear the input
       e.target.value = ""
@@ -160,8 +160,21 @@ export function DesignControls() {
     let paletteString = ""
     
     if (theme === "custom-palette") {
-      paletteString = `${customColors.primary}, ${customColors.background}, ${customColors.card}, ${customColors.foreground}`
-      if (activeDesign === "dholeish") {
+      paletteString = [
+        customColors.background,
+        customColors.foreground,
+        customColors.card,
+        customColors.cardForeground,
+        customColors.primary,
+        customColors.primaryForeground,
+        customColors.secondary,
+        customColors.secondaryForeground,
+        customColors.muted,
+        customColors.mutedForeground,
+        customColors.border,
+      ].join(", ")
+      
+      if (activeDesign === "dholeish" || activeDesign === "rakery") {
         paletteString += `, ${customColors.pedestalTop}`
       }
     } else {
@@ -188,18 +201,67 @@ export function DesignControls() {
         const r = data[0]
         const g = data[1]
         const b = data[2]
+        const a = data[3]
         
-        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+        const baseHex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+        if (a < 255) {
+          const alphaHex = a.toString(16).padStart(2, "0").toUpperCase()
+          return baseHex + alphaHex
+        }
+        return baseHex
       }
 
-      const primaryHex = getHex("bg-primary")
-      const backgroundHex = getHex("bg-background")
+      const getHexBorder = (cssClass: string) => {
+        testDiv.className = `fixed top-0 left-0 opacity-0 pointer-events-none border ${cssClass}`
+        const color = getComputedStyle(testDiv).borderTopColor
+        
+        if (!ctx) return "#000000"
+        
+        ctx.clearRect(0, 0, 1, 1)
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        
+        const data = ctx.getImageData(0, 0, 1, 1).data
+        const r = data[0]
+        const g = data[1]
+        const b = data[2]
+        const a = data[3]
+        
+        const baseHex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+        if (a < 255) {
+          const alphaHex = a.toString(16).padStart(2, "0").toUpperCase()
+          return baseHex + alphaHex
+        }
+        return baseHex
+      }
+
+      const bgHex = getHex("bg-background")
+      const fgHex = getHex("bg-foreground")
       const cardHex = getHex("bg-card")
-      const foregroundHex = getHex("bg-foreground")
+      const cardFgHex = getHex("bg-card-foreground")
+      const primaryHex = getHex("bg-primary")
+      const primaryFgHex = getHex("bg-primary-foreground")
+      const secondaryHex = getHex("bg-secondary")
+      const secondaryFgHex = getHex("bg-secondary-foreground")
+      const mutedHex = getHex("bg-muted")
+      const mutedFgHex = getHex("bg-muted-foreground")
+      const borderHexVal = getHexBorder("border-border")
       
-      paletteString = `${primaryHex}, ${backgroundHex}, ${cardHex}, ${foregroundHex}`
+      paletteString = [
+        bgHex,
+        fgHex,
+        cardHex,
+        cardFgHex,
+        primaryHex,
+        primaryFgHex,
+        secondaryHex,
+        secondaryFgHex,
+        mutedHex,
+        mutedFgHex,
+        borderHexVal
+      ].join(", ")
       
-      if (activeDesign === "dholeish") {
+      if (activeDesign === "dholeish" || activeDesign === "rakery") {
          const pedestalTopHex = getHex("bg-pedestal-top")
          paletteString += `, ${pedestalTopHex}`
       }
@@ -242,26 +304,54 @@ export function DesignControls() {
       )}
       
       {mounted && (
-        <div className="flex items-center gap-4 border-l border-border/50 pl-4 ml-1">
+        <div className="flex flex-wrap items-center gap-4 border-l border-border/50 pl-4 ml-1">
           {theme === "custom-palette" && (
             <>
               <DraggableColorPicker 
-                colorKey="primary" label="Accent" value={customColors.primary} 
-                onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
                 colorKey="background" label="Bg" value={customColors.background} 
                 onChange={(v) => setCustomColor("background", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="foreground" label="Text" value={customColors.foreground} 
+                onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors} 
               />
               <DraggableColorPicker 
                 colorKey="card" label="Card" value={customColors.card} 
                 onChange={(v) => setCustomColor("card", v)} onSwap={swapColors} 
               />
               <DraggableColorPicker 
-                colorKey="foreground" label="Text" value={customColors.foreground} 
-                onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors} 
+                colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground} 
+                onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors} 
               />
-              {activeDesign === "dholeish" && (
+              <DraggableColorPicker 
+                colorKey="primary" label="Accent" value={customColors.primary} 
+                onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground} 
+                onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="secondary" label="Sec" value={customColors.secondary} 
+                onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground} 
+                onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="muted" label="Muted" value={customColors.muted} 
+                onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground} 
+                onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="border" label="Border" value={customColors.border} 
+                onChange={(v) => setCustomColor("border", v)} onSwap={swapColors} 
+              />
+              {(activeDesign === "dholeish" || activeDesign === "rakery") && (
                 <DraggableColorPicker 
                   colorKey="pedestalTop" label="Pedestal" value={customColors.pedestalTop} 
                   onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 

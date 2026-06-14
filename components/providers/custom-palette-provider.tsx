@@ -6,16 +6,30 @@ import { useTheme } from "next-themes"
 export type CustomColors = {
   background: string
   foreground: string
-  primary: string
   card: string
+  cardForeground: string
+  primary: string
+  primaryForeground: string
+  secondary: string
+  secondaryForeground: string
+  muted: string
+  mutedForeground: string
+  border: string
   pedestalTop: string
 }
 
 const DEFAULT_CUSTOM_COLORS: CustomColors = {
   background: "#18181b", // zinc-900
   foreground: "#f4f4f5", // zinc-100
-  primary: "#3b82f6",    // blue-500
   card: "#27272a",       // zinc-800
+  cardForeground: "#f4f4f5", // zinc-100
+  primary: "#3b82f6",    // blue-500
+  primaryForeground: "#18181b", // zinc-900
+  secondary: "#27272a",  // zinc-800
+  secondaryForeground: "#f4f4f5", // zinc-100
+  muted: "#27272a",      // zinc-800
+  mutedForeground: "#a1a1aa", // zinc-400
+  border: "#3f3f46",     // zinc-700
   pedestalTop: "#3f3f46",// zinc-700
 }
 
@@ -60,11 +74,18 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   const applyBulkColors = (colors: string[]) => {
     setCustomColors((prev) => {
       const next = { ...prev }
-      if (colors[0]) next.primary = colors[0]
-      if (colors[1]) next.background = colors[1]
+      if (colors[0]) next.background = colors[0]
+      if (colors[1]) next.foreground = colors[1]
       if (colors[2]) next.card = colors[2]
-      if (colors[3]) next.foreground = colors[3]
-      if (colors[4]) next.pedestalTop = colors[4]
+      if (colors[3]) next.cardForeground = colors[3]
+      if (colors[4]) next.primary = colors[4]
+      if (colors[5]) next.primaryForeground = colors[5]
+      if (colors[6]) next.secondary = colors[6]
+      if (colors[7]) next.secondaryForeground = colors[7]
+      if (colors[8]) next.muted = colors[8]
+      if (colors[9]) next.mutedForeground = colors[9]
+      if (colors[10]) next.border = colors[10]
+      if (colors[11]) next.pedestalTop = colors[11]
       
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       return next
@@ -95,19 +116,19 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       --background: ${customColors.background};
       --foreground: ${customColors.foreground};
       --card: ${customColors.card};
-      --card-foreground: ${customColors.foreground};
+      --card-foreground: ${customColors.cardForeground};
       --popover: ${customColors.card};
       --popover-foreground: ${customColors.foreground};
       --primary: ${customColors.primary};
-      --primary-foreground: ${customColors.background};
-      --secondary: ${customColors.card};
-      --secondary-foreground: ${customColors.foreground};
-      --muted: ${customColors.card};
-      --muted-foreground: ${customColors.foreground};
+      --primary-foreground: ${customColors.primaryForeground};
+      --secondary: ${customColors.secondary};
+      --secondary-foreground: ${customColors.secondaryForeground};
+      --muted: ${customColors.muted};
+      --muted-foreground: ${customColors.mutedForeground};
       --accent: ${customColors.primary};
-      --accent-foreground: ${customColors.background};
-      --border: color-mix(in srgb, ${customColors.foreground} 12%, transparent);
-      --input: color-mix(in srgb, ${customColors.foreground} 18%, transparent);
+      --accent-foreground: ${customColors.primaryForeground};
+      --border: ${customColors.border};
+      --input: ${customColors.border};
       --ring: ${customColors.primary};
       
       --pedestal-glow: ${customColors.primary};
