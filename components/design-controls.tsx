@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2 } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -141,7 +141,7 @@ function DraggableColorPicker({
   )
 }
 
-export function DesignControls() {
+export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { theme, setTheme } = useTheme()
   const { activeLayoutStructure, setLayoutStructure } = useLayoutStructure()
   const { activeDesign, setDesign } = useDesign()
@@ -298,109 +298,42 @@ export function DesignControls() {
   const currentPalettes = palettesByDesign[activeDesign] || []
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3">
-      <Segmented<DesignId>
-        label="Design"
-        icon={<Frame className="size-3.5" aria-hidden />}
-        options={designs}
-        value={activeDesign}
-        onChange={handleDesignChange}
-      />
-      <Segmented<ColorPalette>
-        label="Palette"
-        icon={<Palette className="size-3.5" aria-hidden />}
-        options={currentPalettes}
-        value={mounted ? (theme as ColorPalette) : undefined}
-        onChange={setTheme}
-      />
-      {activeDesign === "rakery" && (
-        <Segmented<LayoutStructure>
-          label="Layout"
-          icon={<LayoutGrid className="size-3.5" aria-hidden />}
-          options={layoutStructures}
-          value={activeLayoutStructure}
-          onChange={setLayoutStructure}
+    <div className="flex flex-col gap-3.5 items-center w-full">
+      {/* Top Row: Selectors + Actions */}
+      <div className="flex flex-wrap items-center justify-center gap-3 w-full">
+        <Segmented<DesignId>
+          label="Design"
+          icon={<Frame className="size-3.5" aria-hidden />}
+          options={designs}
+          value={activeDesign}
+          onChange={handleDesignChange}
         />
-      )}
-      
-      {mounted && (
-        <div className="flex flex-wrap items-center gap-4 border-l border-border/50 pl-4 ml-1">
-          {theme === "custom-palette" && (
-            <>
-              <DraggableColorPicker 
-                colorKey="background" label="Bg" value={customColors.background} 
-                onChange={(v) => setCustomColor("background", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="foreground" label="Text" value={customColors.foreground} 
-                onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="card" label="Card" value={customColors.card} 
-                onChange={(v) => setCustomColor("card", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground} 
-                onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="primary" label="Accent" value={customColors.primary} 
-                onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground} 
-                onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="secondary" label="Sec" value={customColors.secondary} 
-                onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground} 
-                onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="muted" label="Muted" value={customColors.muted} 
-                onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground} 
-                onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors} 
-              />
-              <DraggableColorPicker 
-                colorKey="border" label="Border" value={customColors.border} 
-                onChange={(v) => setCustomColor("border", v)} onSwap={swapColors} 
-              />
-              {(activeDesign === "dholeish" || activeDesign === "rakery") && (
-                <>
-                  <DraggableColorPicker 
-                    colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow} 
-                    onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors} 
-                  />
-                  <DraggableColorPicker 
-                    colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop} 
-                    onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 
-                  />
-                  <DraggableColorPicker 
-                    colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder} 
-                    onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors} 
-                  />
-                  <DraggableColorPicker 
-                    colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody} 
-                    onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors} 
-                  />
-                  <DraggableColorPicker 
-                    colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow} 
-                    onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors} 
-                  />
-                </>
-              )}
-              <div className="flex items-end gap-1.5 border-l border-border/50 pl-3 ml-1 h-full">
+        <Segmented<ColorPalette>
+          label="Palette"
+          icon={<Palette className="size-3.5" aria-hidden />}
+          options={currentPalettes}
+          value={mounted ? (theme as ColorPalette) : undefined}
+          onChange={setTheme}
+        />
+        {activeDesign === "rakery" && (
+          <Segmented<LayoutStructure>
+            label="Layout"
+            icon={<LayoutGrid className="size-3.5" aria-hidden />}
+            options={layoutStructures}
+            value={activeLayoutStructure}
+            onChange={setLayoutStructure}
+          />
+        )}
+        
+        {mounted && (
+          <div className="flex items-center gap-1.5 ml-1 pl-3 border-l border-border/50 h-7">
+            {theme === "custom-palette" && (
+              <>
                 <input 
                   type="text" 
                   placeholder="Paste #colors..." 
                   onChange={handleBulkPaste}
-                  className="h-6 w-28 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <button 
                   onClick={resetCustomColors} 
@@ -409,11 +342,8 @@ export function DesignControls() {
                 >
                   <RotateCcw className="size-3.5" />
                 </button>
-              </div>
-            </>
-          )}
-          
-          <div className="flex items-center h-full">
+              </>
+            )}
             <button 
               onClick={handleCopyPalette} 
               title="Copy current palette to clipboard"
@@ -421,7 +351,88 @@ export function DesignControls() {
             >
               {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
             </button>
+            <button 
+              onClick={onMinimize}
+              title="Minimize panel"
+              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Minimize2 className="size-3.5" />
+            </button>
           </div>
+        )}
+      </div>
+
+      {/* Bottom Row: Color Pickers (only shown in custom mode) */}
+      {mounted && theme === "custom-palette" && (
+        <div className="flex flex-wrap items-center justify-center gap-4 border-t border-border/20 pt-3.5 w-full">
+          <DraggableColorPicker 
+            colorKey="background" label="Bg" value={customColors.background} 
+            onChange={(v) => setCustomColor("background", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="foreground" label="Text" value={customColors.foreground} 
+            onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="card" label="Card" value={customColors.card} 
+            onChange={(v) => setCustomColor("card", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground} 
+            onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="primary" label="Accent" value={customColors.primary} 
+            onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground} 
+            onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="secondary" label="Sec" value={customColors.secondary} 
+            onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground} 
+            onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="muted" label="Muted" value={customColors.muted} 
+            onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground} 
+            onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors} 
+          />
+          <DraggableColorPicker 
+            colorKey="border" label="Border" value={customColors.border} 
+            onChange={(v) => setCustomColor("border", v)} onSwap={swapColors} 
+          />
+          {(activeDesign === "dholeish" || activeDesign === "rakery") && (
+            <>
+              <DraggableColorPicker 
+                colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow} 
+                onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop} 
+                onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder} 
+                onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody} 
+                onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors} 
+              />
+              <DraggableColorPicker 
+                colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow} 
+                onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors} 
+              />
+            </>
+          )}
         </div>
       )}
     </div>

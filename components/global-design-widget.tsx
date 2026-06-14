@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { DesignControls } from "@/components/design-controls"
-import { GripHorizontal, Minus, Palette } from "lucide-react"
+import { GripHorizontal, Minimize2, Palette } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const STORAGE_KEY = "global-widget-state"
@@ -69,8 +69,19 @@ export function GlobalDesignWidget() {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
-    // Only allow drag from the handle or the pill itself
-    if (!target.closest(".drag-handle") && !isMinimized) return
+    
+    if (!isMinimized) {
+      // Don't drag if clicking interactive elements or pickers
+      if (
+        target.closest("button") || 
+        target.closest("input") || 
+        target.closest("select") ||
+        target.closest("textarea") ||
+        target.closest("[draggable]")
+      ) {
+        return
+      }
+    }
 
     e.preventDefault() // Prevent text selection
     setIsDragging(true)
@@ -145,32 +156,15 @@ export function GlobalDesignWidget() {
         isDragging && "transition-none select-none",
         isMinimized 
           ? "rounded-full bg-primary text-primary-foreground p-3.5 cursor-grab active:cursor-grabbing hover:bg-primary/90 hover:scale-105 transition-transform"
-          : "rounded-xl border border-border/20 bg-background/80 backdrop-blur-md p-2 flex items-center gap-3"
+          : "rounded-xl border border-border/20 bg-background/80 backdrop-blur-md p-3 flex items-center gap-3 w-fit max-w-[95vw] cursor-grab active:cursor-grabbing"
       )}
     >
       {isMinimized ? (
         <Palette className="size-6 pointer-events-none text-white" />
       ) : (
-        <>
-          <div className="flex flex-col gap-1 items-center border-r border-border/50 pr-2">
-            <button 
-              className="drag-handle p-1.5 rounded hover:bg-white/10 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
-              title="Drag to move widget"
-            >
-              <GripHorizontal className="size-4 pointer-events-none" />
-            </button>
-            <button 
-              onClick={() => setIsMinimized(true)}
-              className="p-1.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-              title="Minimize widget"
-            >
-              <Minus className="size-4" />
-            </button>
-          </div>
-          <div className="overflow-x-auto max-w-[85vw]">
-            <DesignControls />
-          </div>
-        </>
+        <div className="overflow-x-auto overflow-y-hidden no-scrollbar max-w-[90vw] w-fit pr-2">
+          <DesignControls onMinimize={() => setIsMinimized(true)} />
+        </div>
       )}
     </div>
   )
