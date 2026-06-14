@@ -79,6 +79,7 @@ function DraggableColorPicker({
   onSwap: (source: keyof CustomColors, target: keyof CustomColors) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const [isHoveringInput, setIsHoveringInput] = useState(false)
   const safeValue = value || "#000000"
 
   const copySingle = () => {
@@ -90,7 +91,7 @@ function DraggableColorPicker({
 
   return (
     <div
-      draggable
+      draggable={!isHoveringInput}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", colorKey)
         e.dataTransfer.effectAllowed = "move"
@@ -126,6 +127,10 @@ function DraggableColorPicker({
       <input
         type="text"
         value={safeValue}
+        onMouseEnter={() => setIsHoveringInput(true)}
+        onMouseLeave={() => setIsHoveringInput(false)}
+        onFocus={() => setIsHoveringInput(true)}
+        onBlur={() => setIsHoveringInput(false)}
         onChange={(e) => {
           const val = e.target.value
           if (val.length > 0 && !val.startsWith("#")) {
@@ -135,7 +140,7 @@ function DraggableColorPicker({
           }
         }}
         placeholder="#000000"
-        className="w-[58px] text-[8px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-3.5 px-0.5 mt-0.5"
+        className="w-[68px] text-[10px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5"
       />
     </div>
   )
