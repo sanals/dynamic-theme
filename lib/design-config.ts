@@ -60,6 +60,14 @@ export const designs: DesignOption[] = [
 
 export const DEFAULT_DESIGN: DesignId = "rakery"
 
+/** Maps each design to its dark and light palette variants for the quick toggle. */
+export const darkLightPairs: Record<DesignId, { dark: ColorPalette; light: ColorPalette }> = {
+  rakery: { dark: "design-variant-1", light: "design-variant-2" },
+  h2n: { dark: "design-variant-3", light: "design-variant-4" },
+  synthesis: { dark: "design-variant-6", light: "design-variant-5" },
+  dholeish: { dark: "design-variant-7", light: "design-variant-8" },
+}
+
 /* ---------------------------------------------------------------- */
 /* 2. COLOR PALETTE AXIS (data-theme)                              */
 /* ---------------------------------------------------------------- */

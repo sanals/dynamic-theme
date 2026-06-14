@@ -392,6 +392,32 @@
   html {
     @apply font-sans;
   }
+
+  /*
+    Theme Transition Animations
+    ---------------------------
+    Smooth crossfade when switching palettes. Excludes interactive
+    elements and the design widget to avoid visual interference.
+  */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke, outline-color;
+    transition-duration: 300ms;
+    transition-timing-function: ease-out;
+  }
+
+  /* Exclude elements where transitions would feel wrong or cause jank */
+  input,
+  textarea,
+  select,
+  canvas,
+  video,
+  [type="color"],
+  [data-no-transition],
+  .transition-none {
+    transition-property: none !important;
+  }
 }
 
 @utility no-scrollbar {
