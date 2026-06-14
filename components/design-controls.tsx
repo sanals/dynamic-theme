@@ -79,9 +79,10 @@ function DraggableColorPicker({
   onSwap: (source: keyof CustomColors, target: keyof CustomColors) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const safeValue = value || "#000000"
 
   const copySingle = () => {
-    navigator.clipboard.writeText(value).then(() => {
+    navigator.clipboard.writeText(safeValue).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -105,21 +106,36 @@ function DraggableColorPicker({
           onSwap(sourceKey, colorKey)
         }
       }}
-      className="flex flex-col gap-0.5 cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-white/5 transition-colors group"
+      className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-white/5 transition-colors group"
       title="Drag to swap. Click label to copy hex."
     >
       <button 
+        type="button"
         onClick={copySingle}
         title="Copy hex code"
-        className="text-[10px] text-muted-foreground leading-none hover:text-foreground transition-colors w-full text-center"
+        className="text-[10px] text-muted-foreground leading-none hover:text-foreground transition-colors w-full text-center font-medium"
       >
         {copied ? "Copied" : label}
       </button>
       <input
         type="color"
-        value={value.slice(0, 7)}
+        value={safeValue.slice(0, 7)}
         onChange={(e) => onChange(e.target.value)}
-        className="size-6 cursor-pointer border-0 p-0 rounded-md overflow-hidden pointer-events-auto"
+        className="size-6 cursor-pointer border-0 p-0 rounded-md overflow-hidden pointer-events-auto shrink-0"
+      />
+      <input
+        type="text"
+        value={safeValue}
+        onChange={(e) => {
+          const val = e.target.value
+          if (val.length > 0 && !val.startsWith("#")) {
+            onChange("#" + val)
+          } else {
+            onChange(val)
+          }
+        }}
+        placeholder="#000000"
+        className="w-[58px] text-[8px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-3.5 px-0.5 mt-0.5"
       />
     </div>
   )
