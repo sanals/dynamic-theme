@@ -923,40 +923,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 onChange={handleBulkPaste}
                 className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
-              {theme === "custom-palette" && (
-                <>
-                  <button
-                    onClick={handleRandomizePalette}
-                    title="Generate random cohesive palette (respects locks)"
-                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    <Shuffle className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={handleResetColors}
-                    title="Reset to default palette"
-                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    <RotateCcw className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={undo}
-                    disabled={!canUndo}
-                    title="Undo last change (Ctrl+Z)"
-                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                  >
-                    <Undo2 className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={redo}
-                    disabled={!canRedo}
-                    title="Redo next change (Ctrl+Y)"
-                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                  >
-                    <Redo2 className="size-3.5" />
-                  </button>
-                </>
-              )}
+              {/* Duplicate history controls removed */}
             </div>
 
             {/* Divider */}
@@ -1406,6 +1373,50 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 className="text-[10px] text-muted-foreground hover:text-foreground transition-colors ml-1"
               >
                 Reset
+              </button>
+            </div>
+
+            {/* Generative & History Controls */}
+            <div className="flex items-center gap-1.5 ml-auto">
+              <button
+                type="button"
+                onClick={handleRandomizePalette}
+                title="Generate random cohesive palette (respects locks)"
+                className="h-6 px-2.5 flex items-center justify-center gap-1.5 rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 hover:border-white/20 transition-colors text-[10px] font-medium"
+              >
+                <Shuffle className="size-3" />
+                <span>Randomize</span>
+              </button>
+              
+              <div className="w-px h-4 bg-border/30 mx-1" />
+
+              <button
+                type="button"
+                onClick={undo}
+                disabled={!canUndo}
+                title="Undo last change (Ctrl+Z)"
+                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Undo2 className="size-3" />
+              </button>
+              
+              <button
+                type="button"
+                onClick={redo}
+                disabled={!canRedo}
+                title="Redo next change (Ctrl+Y)"
+                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Redo2 className="size-3" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetColors}
+                title="Reset to default palette"
+                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-red-400/70 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors ml-1"
+              >
+                <RotateCcw className="size-3" />
               </button>
             </div>
           </div>
