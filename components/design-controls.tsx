@@ -23,6 +23,7 @@ import { generatePalette } from "@/lib/palette-generator"
 import { getContrastInfo } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
+import { POPULAR_GOOGLE_FONTS } from "@/lib/popular-fonts"
 
 export interface Preset {
   id: string
@@ -292,7 +293,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { theme, setTheme: _setTheme } = useTheme()
   const { activeLayoutStructure, setLayoutStructure: _setLayoutStructure } = useLayoutStructure()
   const { activeDesign, setDesign: _setDesign } = useDesign()
-  const { activeFont, setFont, setCustomFont } = useFont()
+  const { activeFont, setFont, setCustomFont, customFontName, dynamicGoogleFontName, setDynamicGoogleFont } = useFont()
 
   // View Transition Wrappers
   const setTheme = (newTheme: string) => {
@@ -313,8 +314,8 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false)
+  const [googleFontSearch, setGoogleFontSearch] = useState("")
   const [shareDropdownOpen, setShareDropdownOpen] = useState(false)
   const [wcagExpanded, setWcagExpanded] = useState(false)
   const [extendedColorsExpanded, setExtendedColorsExpanded] = useState(false)
@@ -322,6 +323,9 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [presetsExpanded, setPresetsExpanded] = useState(false)
   const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)
   const presetsContainerRef = useRef<HTMLDivElement>(null)
+  
+  // Font Selector
+  const fontFileInputRef = useRef<HTMLInputElement>(null)
 
   const handleCaptureSnapshot = () => {
     const activeThemeName = theme === "custom-palette" ? "Custom" : theme || "Default"
@@ -853,87 +857,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             onChange={setLayoutStructure}
           />
         )}
-        {/* Font Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
-            className={cn(
-              "h-7 flex items-center gap-1.5 px-2.5 rounded-lg border transition-all text-xs font-medium cursor-pointer",
-              fontDropdownOpen
-                ? "bg-primary/15 border-primary/40 text-foreground"
-                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-border/80"
-            )}
-          >
-            <Type className="size-3.5" aria-hidden />
-            <span className="max-w-[120px] truncate">{mounted ? (fontPairings[activeFont]?.label || "Font") : "Font"}</span>
-            <ChevronDown className={cn("size-3 transition-transform duration-200", fontDropdownOpen && "rotate-180")} />
-          </button>
-          {fontDropdownOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onPointerDown={() => setFontDropdownOpen(false)} />
-              <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] py-1.5 rounded-xl border border-white/10 bg-background/95 backdrop-blur-lg shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
-                {Object.values(fontPairings).filter(fp => fp.id !== "custom").map((fp) => (
-                  <button
-                    key={fp.id}
-                    type="button"
-                    onClick={() => { setFont(fp.id); setFontDropdownOpen(false) }}
-                    className={cn(
-                      "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
-                      activeFont === fp.id
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                    )}
-                  >
-                    {activeFont === fp.id && <Check className="size-3" />}
-                    <span className={activeFont === fp.id ? "" : "ml-5"}>{fp.label}</span>
-                  </button>
-                ))}
-                <div className="border-t border-white/10 mt-1 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => { setFont("custom"); setFontDropdownOpen(false) }}
-                    className={cn(
-                      "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
-                      activeFont === "custom"
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                    )}
-                  >
-                    {activeFont === "custom" && <Check className="size-3" />}
-                    <span className={activeFont === "custom" ? "" : "ml-5"}>Custom Upload</span>
-                  </button>
-                  {activeFont === "custom" && (
-                    <button
-                      type="button"
-                      onClick={() => { fileInputRef.current?.click(); setFontDropdownOpen(false) }}
-                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-primary hover:bg-white/5 transition-colors flex items-center gap-2 ml-5"
-                    >
-                      <Upload className="size-3" />
-                      Upload .woff2 / .ttf / .otf
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".woff2,.ttf,.otf"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              try {
-                const familyName = `CustomFont_${Date.now()}`
-                await setCustomFont(file, familyName)
-              } catch (err) {
-                console.error(err)
-              }
-              e.target.value = ""
-            }}
-          />
-        </div>
 
         {mounted && (
           <div className="flex items-center gap-1 ml-1 pl-3 border-l border-border/50 h-7">
@@ -1231,7 +1154,171 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
           </div>
 
           {/* Shape & Format Sliders */}
-          <div className="px-3 pb-1 flex items-center gap-4">
+          <div className="px-3 pb-1 flex flex-wrap items-center gap-6 relative z-10">
+
+            {/* Font Selector */}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Font</label>
+              
+              <div className="relative">
+                <button
+                  onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
+                  className={cn(
+                    "h-6 w-32 flex items-center justify-between px-2 rounded bg-black/30 border border-white/10 transition-all text-[10px] font-medium cursor-pointer",
+                    fontDropdownOpen
+                      ? "ring-1 ring-primary text-foreground"
+                      : "text-foreground hover:border-white/20"
+                  )}
+                >
+                  <span className="truncate">
+                    {mounted ? (
+                      activeFont === "dynamic-google" ? (dynamicGoogleFontName || "Google Font") :
+                      activeFont === "custom" ? (customFontName || "Custom Font") :
+                      fontPairings[activeFont as FontPairingId]?.label || "Font"
+                    ) : "Font"}
+                  </span>
+                  <ChevronDown className={cn("size-3 opacity-50 transition-transform duration-200", fontDropdownOpen && "rotate-180")} />
+                </button>
+                {fontDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onPointerDown={() => setFontDropdownOpen(false)} />
+                    <div className="absolute bottom-full left-0 mb-1.5 z-50 min-w-[200px] py-1.5 rounded-xl border border-white/10 bg-background/95 backdrop-blur-lg shadow-2xl animate-in fade-in slide-in-from-bottom-1 duration-150">
+                      {Object.values(fontPairings).filter(fp => fp.id !== "custom").map((fp) => (
+                        <button
+                          key={fp.id}
+                          type="button"
+                          onClick={() => { setFont(fp.id); setFontDropdownOpen(false) }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
+                            activeFont === fp.id
+                              ? "bg-primary/15 text-primary"
+                              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                          )}
+                        >
+                          {activeFont === fp.id && <Check className="size-3" />}
+                          <span className={activeFont === fp.id ? "" : "ml-5"}>{fp.label}</span>
+                        </button>
+                      ))}
+                      {/* Dynamic Google Font Selection if active */}
+                      {dynamicGoogleFontName && (
+                        <button
+                          type="button"
+                          onClick={() => { setFont("dynamic-google"); setFontDropdownOpen(false) }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
+                            activeFont === "dynamic-google"
+                              ? "bg-primary/15 text-primary"
+                              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                          )}
+                        >
+                          {activeFont === "dynamic-google" && <Check className="size-3" />}
+                          <span className={activeFont === "dynamic-google" ? "" : "ml-5"}>{dynamicGoogleFontName} (Google)</span>
+                        </button>
+                      )}
+
+                      {/* Custom Upload Selection if uploaded */}
+                      {customFontName && (
+                        <button
+                          type="button"
+                          onClick={() => { setFont("custom"); setFontDropdownOpen(false) }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
+                            activeFont === "custom"
+                              ? "bg-primary/15 text-primary"
+                              : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                          )}
+                        >
+                          {activeFont === "custom" && <Check className="size-3" />}
+                          <span className={activeFont === "custom" ? "" : "ml-5"}>{customFontName} (Local)</span>
+                        </button>
+                      )}
+
+                      <div className="border-t border-white/10 mt-1 pt-1">
+                        <div className="px-3 pt-2 pb-1 relative">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              placeholder="Search Google Fonts..."
+                              value={googleFontSearch}
+                              onChange={(e) => setGoogleFontSearch(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && googleFontSearch.trim()) {
+                                  setDynamicGoogleFont(googleFontSearch.trim())
+                                  setGoogleFontSearch("")
+                                  setFontDropdownOpen(false)
+                                }
+                              }}
+                              className="flex-1 min-w-0 bg-black/40 border border-white/10 rounded px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (googleFontSearch.trim()) {
+                                  setDynamicGoogleFont(googleFontSearch.trim())
+                                  setGoogleFontSearch("")
+                                  setFontDropdownOpen(false)
+                                }
+                              }}
+                              className="h-6 px-2.5 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors shrink-0"
+                            >
+                              Apply
+                            </button>
+                          </div>
+                          
+                          {/* Autocomplete Suggestions */}
+                          {googleFontSearch.trim().length > 0 && (
+                            <div className="absolute top-full left-3 right-3 mt-1 max-h-32 overflow-y-auto bg-black/90 border border-white/10 rounded shadow-xl z-50 no-scrollbar">
+                              {POPULAR_GOOGLE_FONTS.filter(f => f.toLowerCase().includes(googleFontSearch.toLowerCase())).slice(0, 15).map(font => (
+                                <button
+                                  key={font}
+                                  type="button"
+                                  onClick={() => {
+                                    setDynamicGoogleFont(font)
+                                    setGoogleFontSearch("")
+                                    setFontDropdownOpen(false)
+                                  }}
+                                  className="w-full text-left px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors truncate"
+                                >
+                                  {font}
+                                </button>
+                              ))}
+                              {POPULAR_GOOGLE_FONTS.filter(f => f.toLowerCase().includes(googleFontSearch.toLowerCase())).length === 0 && (
+                                <div className="px-2 py-1.5 text-[10px] text-muted-foreground/50">
+                                  Press Apply to use anyway.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fontFileInputRef.current?.click()}
+                title="Upload custom font (.ttf, .otf, .woff2)"
+                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+              >
+                <Upload className="size-3" />
+              </button>
+              <input
+                type="file"
+                ref={fontFileInputRef}
+                className="hidden"
+                multiple
+                accept=".ttf,.otf,.woff,.woff2"
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const filesArray = Array.from(e.target.files)
+                    const baseName = filesArray[0].name.split('.')[0].replace(/[-_]/g, ' ')
+                    await setCustomFont(filesArray, baseName)
+                    e.target.value = ""
+                  }
+                }}
+              />
+            </div>
 
             <div className="flex items-center gap-2">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Radius</label>
