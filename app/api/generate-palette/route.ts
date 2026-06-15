@@ -14,8 +14,12 @@ export async function POST(req: Request) {
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
+    if (prompt.length > 120) {
+      return NextResponse.json({ error: "Prompt is too long. Maximum 120 characters." }, { status: 400 });
+    }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Sanitize prompt (remove newlines, tabs, and escape sequences)
+    const sanitizedPrompt = prompt.replace(/[\n\r\t]/g, " ").trim();
 
     const systemInstruction = `
 You are an expert UI/UX designer. Your task is to generate a cohesive, accessible 16-color theme based on the user's prompt.
@@ -46,12 +50,18 @@ Rules:
 5. Provide a cohesive theme that strictly fits the prompt.
 `;
 
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      systemInstruction: systemInstruction
+    });
+
+
     let result;
     let retries = 3;
     while (retries > 0) {
       try {
         result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: `Generate a theme for: "${prompt}"\n\n${systemInstruction}` }] }],
+          contents: [{ role: "user", parts: [{ text: `Generate a theme for: "${sanitizedPrompt}"` }] }],
           generationConfig: {
             temperature: 0.7,
           }
@@ -87,7 +97,23 @@ Rules:
 
     try {
       const parsedTheme = JSON.parse(jsonStr);
-      return NextResponse.json(parsedTheme);
+      
+      // Normalize hex codes: Sometimes Gemini forgets the '#' prefix
+      const normalizedTheme: Record<string, string> = {};
+      for (const [key, value] of Object.entries(parsedTheme)) {
+        if (typeof value === "string") {
+          let hex = value.trim();
+          if (!hex.startsWith("#")) {
+            hex = "#" + hex;
+          }
+          normalizedTheme[key] = hex;
+        } else {
+          normalizedTheme[key] = String(value);
+        }
+      }
+
+      console.log("[✨ AI Magic Generator] Successfully parsed and normalized theme!");
+      return NextResponse.json(normalizedTheme);
     } catch (e) {
       console.error("Failed to parse Gemini JSON:", jsonStr);
       return NextResponse.json({ error: "Failed to parse generated theme" }, { status: 500 });

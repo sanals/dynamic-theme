@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye, Sparkles, Loader2 } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -20,7 +20,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
-import { getContrastInfo } from "@/lib/color-utils"
+import { getContrastInfo, extractDominantColor } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
 import { POPULAR_GOOGLE_FONTS } from "@/lib/popular-fonts"
@@ -328,6 +328,10 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGeneratingAi, setIsGeneratingAi] = useState(false)
   const fontFileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Image Theme Extractor
+  const imageFileInputRef = useRef<HTMLInputElement>(null)
+  const [isExtractingImage, setIsExtractingImage] = useState(false)
 
   const handleCaptureSnapshot = () => {
     const activeThemeName = theme === "custom-palette" ? "Custom" : theme || "Default"
@@ -604,6 +608,52 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       alert("AI Generation failed. Check terminal for details.")
     } finally {
       setIsGeneratingAi(false)
+    }
+  }
+
+  const handleExtractImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsExtractingImage(true)
+    try {
+      const dominantHex = await extractDominantColor(file)
+      
+      // Temporarily lock the primary color to the extracted hex
+      // and generate a palette around it
+      const tempColors = { ...customColors, primary: dominantHex }
+      const newPalette = generatePalette(
+        tempColors,
+        { ...lockedColors, primary: true }, // Force primary to be locked
+        activeDesign
+      )
+      
+      // Apply the newly generated palette!
+      applyBulkColors([
+        newPalette.background,
+        newPalette.foreground,
+        newPalette.card,
+        newPalette.cardForeground,
+        newPalette.primary,
+        newPalette.primaryForeground,
+        newPalette.secondary,
+        newPalette.secondaryForeground,
+        newPalette.muted,
+        newPalette.mutedForeground,
+        newPalette.border,
+        newPalette.pedestalGlow,
+        newPalette.pedestalTop,
+        newPalette.pedestalTopBorder,
+        newPalette.pedestalBody,
+        newPalette.pedestalShadow,
+      ])
+    } catch (err) {
+      console.error(err)
+      alert("Failed to extract color from image.")
+    } finally {
+      setIsExtractingImage(false)
+      // Reset input so the same image can be uploaded again if needed
+      if (imageFileInputRef.current) imageFileInputRef.current.value = ""
     }
   }
 
@@ -917,12 +967,14 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
                 Copy Palette
               </button>
-              <input
-                type="text"
-                placeholder="Paste palette"
-                onChange={handleBulkPaste}
-                className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+              {theme === "custom-palette" && (
+                <input
+                  type="text"
+                  placeholder="Paste palette"
+                  onChange={handleBulkPaste}
+                  className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              )}
               {/* Duplicate history controls removed */}
             </div>
 
@@ -1168,23 +1220,43 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               <Sparkles className="size-3.5 text-purple-400 shrink-0 ml-1" />
               <input
                 type="text"
+                maxLength={120}
                 placeholder="AI Magic: Describe a theme (e.g. Cyberpunk Neon)..."
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleGenerateAiTheme()
                 }}
-                disabled={isGeneratingAi}
+                disabled={isGeneratingAi || isExtractingImage}
                 className="flex-1 min-w-0 bg-transparent border-none text-[10px] text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
               />
               <button
                 type="button"
                 onClick={handleGenerateAiTheme}
-                disabled={isGeneratingAi || !aiPrompt.trim()}
-                className="h-6 px-3 rounded bg-purple-500/20 text-purple-300 border border-purple-500/50 text-[10px] font-semibold hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+                disabled={isGeneratingAi || !aiPrompt.trim() || isExtractingImage}
+                className="h-6 px-3 rounded bg-purple-500/30 text-purple-100 border border-purple-500/50 text-[10px] font-bold hover:bg-purple-500/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
               >
                 {isGeneratingAi ? <Loader2 className="size-3 animate-spin" /> : "Generate"}
               </button>
+              
+              <div className="w-px h-4 bg-purple-500/40 mx-0.5" />
+              
+              <button
+                type="button"
+                onClick={() => imageFileInputRef.current?.click()}
+                disabled={isExtractingImage || isGeneratingAi}
+                title="Extract theme from Image"
+                className="h-6 w-6 rounded bg-purple-500/30 text-purple-100 border border-purple-500/50 hover:bg-purple-500/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+              >
+                {isExtractingImage ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3.5" />}
+              </button>
+              <input
+                type="file"
+                ref={imageFileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleExtractImage}
+              />
             </div>
           </div>
 

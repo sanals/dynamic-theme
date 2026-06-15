@@ -405,6 +405,18 @@
     @apply font-sans;
   }
 
+  /* Ensure all interactive elements have a unified pointer cursor by default */
+  button, 
+  [role="button"],
+  a {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  button[disabled] {
+    cursor: not-allowed;
+  }
+
   /* 
     Global transitions removed. 
     Applying transitions to `*` causes massive style recalculation storms and lag during theme swaps.
