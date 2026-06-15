@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye, Sparkles, Loader2 } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -325,6 +325,8 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const presetsContainerRef = useRef<HTMLDivElement>(null)
   
   // Font Selector
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false)
   const fontFileInputRef = useRef<HTMLInputElement>(null)
 
   const handleCaptureSnapshot = () => {
@@ -563,6 +565,46 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     setPresets(updatedPresets)
     const customOnly = updatedPresets.filter(p => p.isCustom)
     window.localStorage.setItem("custom-palette-presets", JSON.stringify(customOnly))
+  }
+
+  const handleGenerateAiTheme = async () => {
+    if (!aiPrompt.trim() || isGeneratingAi) return
+    setIsGeneratingAi(true)
+    try {
+      const res = await fetch("/api/generate-palette", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt.trim() })
+      })
+      if (!res.ok) {
+        throw new Error("Failed to generate theme")
+      }
+      const newColors = await res.json()
+      applyBulkColors([
+        newColors.background,
+        newColors.foreground,
+        newColors.card,
+        newColors.cardForeground,
+        newColors.primary,
+        newColors.primaryForeground,
+        newColors.secondary,
+        newColors.secondaryForeground,
+        newColors.muted,
+        newColors.mutedForeground,
+        newColors.border,
+        newColors.pedestalGlow || customColors.pedestalGlow,
+        newColors.pedestalTop || customColors.pedestalTop,
+        newColors.pedestalTopBorder || customColors.pedestalTopBorder,
+        newColors.pedestalBody || customColors.pedestalBody,
+        newColors.pedestalShadow || customColors.pedestalShadow,
+      ])
+      setAiPrompt("")
+    } catch (err) {
+      console.error(err)
+      alert("AI Generation failed. Check terminal for details.")
+    } finally {
+      setIsGeneratingAi(false)
+    }
   }
 
   const handleRandomizePalette = () => {
@@ -1150,6 +1192,32 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* AI Magic Generator */}
+          <div className="px-3 pb-1 flex items-center gap-2 relative z-10 w-full animate-in fade-in">
+            <div className="flex items-center gap-1.5 w-full bg-black/30 border border-purple-500/30 rounded-lg p-1.5 shadow-inner">
+              <Sparkles className="size-3.5 text-purple-400 shrink-0 ml-1" />
+              <input
+                type="text"
+                placeholder="AI Magic: Describe a theme (e.g. Cyberpunk Neon)..."
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleGenerateAiTheme()
+                }}
+                disabled={isGeneratingAi}
+                className="flex-1 min-w-0 bg-transparent border-none text-[10px] text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
+              />
+              <button
+                type="button"
+                onClick={handleGenerateAiTheme}
+                disabled={isGeneratingAi || !aiPrompt.trim()}
+                className="h-6 px-3 rounded bg-purple-500/20 text-purple-300 border border-purple-500/50 text-[10px] font-semibold hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+              >
+                {isGeneratingAi ? <Loader2 className="size-3 animate-spin" /> : "Generate"}
+              </button>
             </div>
           </div>
 
