@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react"
 export function SynthesisHero() {
   return (
     <section className="w-full max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center">
-      <div className="relative w-full aspect-square max-h-[600px] flex justify-center items-center rounded-[1.25rem] bg-card shadow-2xl shadow-foreground/5 overflow-hidden">
+      <div className="relative w-full aspect-square max-h-[600px] flex justify-center items-center rounded-3xl bg-card shadow-2xl shadow-foreground/5 overflow-hidden">
         
         {/* Floating Typography behind image */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-0">
