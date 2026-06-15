@@ -20,7 +20,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
-import { getContrastInfo, formatColor, generateTailwindShades, type ColorFormat } from "@/lib/color-utils"
+import { getContrastInfo } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
 
@@ -179,7 +179,6 @@ function DraggableColorPicker({
   onSwap,
   isLocked,
   onToggleLock,
-  displayFormat,
 }: {
   colorKey: keyof CustomColors
   label: string
@@ -188,16 +187,13 @@ function DraggableColorPicker({
   onSwap: (source: keyof CustomColors, target: keyof CustomColors) => void
   isLocked?: boolean
   onToggleLock?: () => void
-  displayFormat?: ColorFormat
 }) {
   const [copied, setCopied] = useState(false)
   const [isHoveringInput, setIsHoveringInput] = useState(false)
-  const [shadesOpen, setShadesOpen] = useState(false)
   const safeValue = value || "#000000"
-  const formattedValue = displayFormat ? formatColor(safeValue, displayFormat) : safeValue
 
   const copySingle = () => {
-    navigator.clipboard.writeText(formattedValue).then(() => {
+    navigator.clipboard.writeText(safeValue).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -226,12 +222,12 @@ function DraggableColorPicker({
         "flex flex-col items-center gap-1 p-1 -m-1 rounded hover:bg-white/5 transition-colors group/item",
         !isLocked && !isHoveringInput ? "cursor-grab active:cursor-grabbing" : ""
       )}
-      title={isLocked ? "Color locked. Click label to copy." : "Drag to swap. Click label to copy."}
+      title={isLocked ? "Color locked. Click label to copy hex." : "Drag to swap. Click label to copy hex."}
     >
       <button
         type="button"
         onClick={copySingle}
-        title={`Copy ${displayFormat ? displayFormat.toUpperCase() : 'HEX'} code`}
+        title="Copy hex code"
         className="text-[10px] text-muted-foreground leading-none hover:text-foreground transition-colors w-full text-center font-medium"
       >
         {copied ? "Copied" : label}
@@ -264,72 +260,30 @@ function DraggableColorPicker({
         )}
       </div>
 
-      <div className="relative">
-        <input
-          type="text"
-          value={formattedValue}
-          readOnly={isLocked}
-          onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
-          onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
-          onFocus={(e) => {
-            if (!isLocked) setIsHoveringInput(true)
-            e.target.select()
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            e.currentTarget.select()
-            if (!isLocked) setShadesOpen(true)
-          }}
-          onBlur={() => {
-            setIsHoveringInput(false)
-            setTimeout(() => setShadesOpen(false), 200)
-          }}
-          onPaste={(e) => {
-            e.stopPropagation()
-          }}
-          onChange={(e) => {
-            let val = e.target.value.trim()
-            val = val.replace(/#/g, "")
-            if (val.length > 0) {
-              onChange("#" + val)
-            } else {
-              onChange("")
-            }
-          }}
-          placeholder="#000000"
-          className={cn(
-            "text-[10px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5 transition-all overflow-hidden text-ellipsis whitespace-nowrap",
-            displayFormat === 'hex' ? "w-[68px]" : displayFormat === 'rgb' ? "w-[110px]" : "w-[160px]"
-          )}
-          title={formattedValue}
-        />
-
-        {shadesOpen && !isLocked && (
-          <>
-            <div className="fixed inset-0 z-40" onPointerDown={() => setShadesOpen(false)} />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 p-1.5 bg-background/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl grid grid-cols-6 gap-1 animate-in zoom-in-95 duration-150 w-max">
-              {generateTailwindShades(safeValue).map(({ step, hex }) => (
-                <button
-                  key={step}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onChange(hex)
-                    setShadesOpen(false)
-                  }}
-                  className="group/shade relative size-5 rounded-sm overflow-hidden hover:scale-110 hover:z-10 hover:ring-2 hover:ring-primary transition-all"
-                  style={{ backgroundColor: hex }}
-                  title={`${step}: ${hex}`}
-                >
-                  <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold opacity-0 group-hover/shade:opacity-100 mix-blend-difference text-white">
-                    {step}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      <input
+        type="text"
+        value={safeValue}
+        readOnly={isLocked}
+        onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
+        onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
+        onFocus={(e) => {
+          if (!isLocked) setIsHoveringInput(true)
+          e.target.select()
+        }}
+        onClick={(e) => e.currentTarget.select()}
+        onBlur={() => setIsHoveringInput(false)}
+        onPaste={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          let val = e.target.value.trim().replace(/#/g, "")
+          if (val.length > 0) {
+            onChange("#" + val)
+          } else {
+            onChange("")
+          }
+        }}
+        placeholder="#000000"
+        className="w-[68px] text-[11px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5"
+      />
     </div>
   )
 }
@@ -368,7 +322,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [presetsExpanded, setPresetsExpanded] = useState(false)
   const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)
   const presetsContainerRef = useRef<HTMLDivElement>(null)
-  const [colorFormat, setColorFormat] = useState<ColorFormat>('hex')
 
   const handleCaptureSnapshot = () => {
     const activeThemeName = theme === "custom-palette" ? "Custom" : theme || "Default"
@@ -1278,22 +1231,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
           </div>
 
           {/* Shape & Format Sliders */}
-          <div className="px-3 pb-1 flex flex-wrap items-center gap-6 relative z-10">
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Format</label>
-              <Segmented<ColorFormat>
-                label=""
-                icon={<></>}
-                options={[
-                  { id: 'hex', label: 'HEX' },
-                  { id: 'rgb', label: 'RGB' },
-                  { id: 'hsl', label: 'HSL' },
-                  { id: 'oklch', label: 'OKLCH' },
-                ]}
-                value={colorFormat}
-                onChange={setColorFormat}
-              />
-            </div>
+          <div className="px-3 pb-1 flex items-center gap-4">
 
             <div className="flex items-center gap-2">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Radius</label>
@@ -1321,78 +1259,67 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
           <div className="w-full pb-1 relative z-0">
             <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-4">
               {/* Standard Pickers */}
-              <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar pt-[80px] -mt-[80px] px-2 pb-2">
+              <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar px-2 pb-2">
                 <DraggableColorPicker
                   colorKey="background" label="Bg" value={customColors.background}
                   onChange={(v) => setCustomColor("background", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="foreground" label="Text" value={customColors.foreground}
                   onChange={(v) => setCustomColor("foreground", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="card" label="Card" value={customColors.card}
                   onChange={(v) => setCustomColor("card", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
                   onChange={(v) => setCustomColor("cardForeground", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="primary" label="Accent" value={customColors.primary}
                   onChange={(v) => setCustomColor("primary", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
                   onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="secondary" label="Sec" value={customColors.secondary}
                   onChange={(v) => setCustomColor("secondary", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
                   onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="muted" label="Muted" value={customColors.muted}
                   onChange={(v) => setCustomColor("muted", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
                   onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
-                  displayFormat={colorFormat}
                 />
                 <DraggableColorPicker
                   colorKey="border" label="Border" value={customColors.border}
                   onChange={(v) => setCustomColor("border", v)} onSwap={handleSwapColors}
                   isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
-                  displayFormat={colorFormat}
                 />
               </div>
 
               {/* Pedestal */}
               {(activeDesign === "dholeish" || activeDesign === "rakery") && (
-                <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar pt-[80px] -mt-[80px] px-2 pb-2">
+                <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar px-2 pb-2">
                   <div className="hidden 2xl:block w-px h-8 bg-white/20 shrink-0 mx-1" />
                   <div className="flex items-center">
                     <div
@@ -1405,32 +1332,28 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                             colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
                             onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={handleSwapColors}
                             isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
-                            displayFormat={colorFormat}
                           />
                           <DraggableColorPicker
                             colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
                             onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={handleSwapColors}
                             isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
-                            displayFormat={colorFormat}
                           />
                           <DraggableColorPicker
                             colorKey="pedestalTopBorder" label="Ped Brdr" value={customColors.pedestalTopBorder}
                             onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={handleSwapColors}
                             isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
-                            displayFormat={colorFormat}
                           />
                           <DraggableColorPicker
                             colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
                             onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={handleSwapColors}
                             isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
-                            displayFormat={colorFormat}
                           />
                           <DraggableColorPicker
                             colorKey="pedestalShadow" label="Ped Shdw" value={customColors.pedestalShadow}
                             onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={handleSwapColors}
                             isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
-                            displayFormat={colorFormat}
                           />
+
                         </div>
                       </div>
                     </div>

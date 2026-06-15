@@ -1,4 +1,3 @@
-import { converter, formatHex } from 'culori'
 
 /**
  * Helper to convert hex to RGB
@@ -90,74 +89,4 @@ export function getContrastInfo(bgHex: string, fgHex: string): ContrastResult {
   return { ratio, level }
 }
 
-export type ColorFormat = 'hex' | 'rgb' | 'hsl' | 'oklch'
-
-const toRgb = converter('rgb')
-const toHsl = converter('hsl')
-const toOklch = converter('oklch')
-
-export function formatColor(hex: string, format: ColorFormat): string {
-  if (format === 'hex') return hex.toUpperCase()
-  
-  if (format === 'rgb') {
-    const rgb = toRgb(hex)
-    if (!rgb) return hex
-    return `rgb(${Math.round((rgb.r || 0) * 255)} ${Math.round((rgb.g || 0) * 255)} ${Math.round((rgb.b || 0) * 255)})`
-  }
-  
-  if (format === 'hsl') {
-    const hsl = toHsl(hex)
-    if (!hsl) return hex
-    return `hsl(${Math.round(hsl.h || 0)} ${Math.round((hsl.s || 0) * 100)}% ${Math.round((hsl.l || 0) * 100)}%)`
-  }
-  
-  if (format === 'oklch') {
-    const o = toOklch(hex)
-    if (!o) return hex
-    return `oklch(${(o.l || 0).toFixed(3)} ${(o.c || 0).toFixed(3)} ${(o.h || 0).toFixed(1)})`
-  }
-  
-  return hex
-}
-
-/**
- * Generate Tailwind-style 50-950 shades based on a base hex color.
- * The base color is treated roughly as the 500 shade.
- * We interpolate lightness in OKLCH space for a perceptually smooth gradient.
- */
-export function generateTailwindShades(baseHex: string): { step: string; hex: string }[] {
-  const baseOklch = toOklch(baseHex)
-  if (!baseOklch) return []
-
-  const steps = [
-    { step: '50', l: 0.98 },
-    { step: '100', l: 0.95 },
-    { step: '200', l: 0.90 },
-    { step: '300', l: 0.82 },
-    { step: '400', l: 0.74 },
-    { step: '500', l: 0.62 },
-    { step: '600', l: 0.52 },
-    { step: '700', l: 0.42 },
-    { step: '800', l: 0.32 },
-    { step: '900', l: 0.22 },
-    { step: '950', l: 0.12 },
-  ]
-
-  return steps.map(({ step, l }) => {
-    // A simple curve to reduce chroma at extremes (very light or very dark)
-    const chromaScale = Math.sin(l * Math.PI)
-    
-    const shadedOklch = {
-      mode: 'oklch',
-      l: l,
-      c: (baseOklch.c || 0) * (0.6 + 0.4 * chromaScale),
-      h: baseOklch.h || 0
-    } as any
-
-    return {
-      step,
-      hex: formatHex(shadedOklch) || '#000000'
-    }
-  })
-}
 
