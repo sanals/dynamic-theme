@@ -9,7 +9,7 @@ interface DholeishProductCardProps {
 
 export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: DholeishProductCardProps) {
   return (
-    <div className="group relative bg-card/90 rounded-[2rem] p-3 shadow-2xl overflow-hidden flex flex-col h-[400px] border border-white/5 backdrop-blur-md transition-all hover:-translate-y-1">
+    <div className="group relative bg-card/90 rounded-3xl p-3 shadow-2xl overflow-hidden flex flex-col h-[400px] border border-white/5 backdrop-blur-md transition-all hover:-translate-y-1">
 
       {/* Top right glowing light effect */}
       <div className="absolute -top-10 -right-10 w-[250px] h-[250px] bg-pedestal-glow/40 blur-[50px] rounded-full pointer-events-none z-0" />
@@ -18,7 +18,7 @@ export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: Dhol
       <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-20 pointer-events-none z-0" />
 
       {/* Inner Border Wrapper */}
-      <div className="relative z-10 flex-1 rounded-[1.5rem] border-[1.5px] border-border/80 overflow-hidden flex flex-col justify-between p-5 group-hover:border-primary/50 transition-colors shadow-[inset_0_4px_20px_rgba(255,255,255,0.03)]">
+      <div className="relative z-10 flex-1 rounded-2xl border-[1.5px] border-border/80 overflow-hidden flex flex-col justify-between p-5 group-hover:border-primary/50 transition-colors shadow-[inset_0_4px_20px_rgba(255,255,255,0.03)]">
 
         {/* Top/Image Area with 3D Pedestal */}
         <div className="relative flex-1 w-full flex flex-col items-center justify-end pb-[32px]">

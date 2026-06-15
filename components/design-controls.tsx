@@ -20,7 +20,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
-import { getContrastInfo } from "@/lib/color-utils"
+import { getContrastInfo, formatColor, generateTailwindShades, type ColorFormat } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
 
@@ -179,6 +179,7 @@ function DraggableColorPicker({
   onSwap,
   isLocked,
   onToggleLock,
+  displayFormat,
 }: {
   colorKey: keyof CustomColors
   label: string
@@ -187,13 +188,16 @@ function DraggableColorPicker({
   onSwap: (source: keyof CustomColors, target: keyof CustomColors) => void
   isLocked?: boolean
   onToggleLock?: () => void
+  displayFormat?: ColorFormat
 }) {
   const [copied, setCopied] = useState(false)
   const [isHoveringInput, setIsHoveringInput] = useState(false)
+  const [shadesOpen, setShadesOpen] = useState(false)
   const safeValue = value || "#000000"
+  const formattedValue = displayFormat ? formatColor(safeValue, displayFormat) : safeValue
 
   const copySingle = () => {
-    navigator.clipboard.writeText(safeValue).then(() => {
+    navigator.clipboard.writeText(formattedValue).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
@@ -222,12 +226,12 @@ function DraggableColorPicker({
         "flex flex-col items-center gap-1 p-1 -m-1 rounded hover:bg-white/5 transition-colors group/item",
         !isLocked && !isHoveringInput ? "cursor-grab active:cursor-grabbing" : ""
       )}
-      title={isLocked ? "Color locked. Click label to copy hex." : "Drag to swap. Click label to copy hex."}
+      title={isLocked ? "Color locked. Click label to copy." : "Drag to swap. Click label to copy."}
     >
       <button
         type="button"
         onClick={copySingle}
-        title="Copy hex code"
+        title={`Copy ${displayFormat ? displayFormat.toUpperCase() : 'HEX'} code`}
         className="text-[10px] text-muted-foreground leading-none hover:text-foreground transition-colors w-full text-center font-medium"
       >
         {copied ? "Copied" : label}
@@ -259,34 +263,73 @@ function DraggableColorPicker({
           </button>
         )}
       </div>
-      <input
-        type="text"
-        value={safeValue}
-        readOnly={isLocked}
-        onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
-        onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
-        onFocus={(e) => {
-          if (!isLocked) setIsHoveringInput(true)
-          e.target.select()
-        }}
-        onClick={(e) => e.currentTarget.select()}
-        onBlur={() => setIsHoveringInput(false)}
-        onPaste={(e) => {
-          e.stopPropagation()
-        }}
-        onChange={(e) => {
-          let val = e.target.value.trim()
-          // Strip out all hashtags first and prepend exactly one to prevent double hashtags
-          val = val.replace(/#/g, "")
-          if (val.length > 0) {
-            onChange("#" + val)
-          } else {
-            onChange("")
-          }
-        }}
-        placeholder="#000000"
-        className="w-[68px] text-[11px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5"
-      />
+
+      <div className="relative">
+        <input
+          type="text"
+          value={formattedValue}
+          readOnly={isLocked}
+          onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
+          onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
+          onFocus={(e) => {
+            if (!isLocked) setIsHoveringInput(true)
+            e.target.select()
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+            e.currentTarget.select()
+            if (!isLocked) setShadesOpen(true)
+          }}
+          onBlur={() => {
+            setIsHoveringInput(false)
+            setTimeout(() => setShadesOpen(false), 200)
+          }}
+          onPaste={(e) => {
+            e.stopPropagation()
+          }}
+          onChange={(e) => {
+            let val = e.target.value.trim()
+            val = val.replace(/#/g, "")
+            if (val.length > 0) {
+              onChange("#" + val)
+            } else {
+              onChange("")
+            }
+          }}
+          placeholder="#000000"
+          className={cn(
+            "text-[10px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5 transition-all overflow-hidden text-ellipsis whitespace-nowrap",
+            displayFormat === 'hex' ? "w-[68px]" : displayFormat === 'rgb' ? "w-[110px]" : "w-[160px]"
+          )}
+          title={formattedValue}
+        />
+
+        {shadesOpen && !isLocked && (
+          <>
+            <div className="fixed inset-0 z-40" onPointerDown={() => setShadesOpen(false)} />
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 p-1.5 bg-background/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl grid grid-cols-6 gap-1 animate-in zoom-in-95 duration-150 w-max">
+              {generateTailwindShades(safeValue).map(({ step, hex }) => (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onChange(hex)
+                    setShadesOpen(false)
+                  }}
+                  className="group/shade relative size-5 rounded-sm overflow-hidden hover:scale-110 hover:z-10 hover:ring-2 hover:ring-primary transition-all"
+                  style={{ backgroundColor: hex }}
+                  title={`${step}: ${hex}`}
+                >
+                  <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold opacity-0 group-hover/shade:opacity-100 mix-blend-difference text-white">
+                    {step}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -312,7 +355,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     if (!document.startViewTransition) return _setDesign(newDesign)
     document.startViewTransition(() => flushSync(() => _setDesign(newDesign)))
   }
-  const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors, undo, redo, canUndo, canRedo } = useCustomPalette()
+  const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors, customRadius, setCustomRadius, undo, redo, canUndo, canRedo } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -325,6 +368,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [presetsExpanded, setPresetsExpanded] = useState(false)
   const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)
   const presetsContainerRef = useRef<HTMLDivElement>(null)
+  const [colorFormat, setColorFormat] = useState<ColorFormat>('hex')
 
   const handleCaptureSnapshot = () => {
     const activeThemeName = theme === "custom-palette" ? "Custom" : theme || "Default"
@@ -964,34 +1008,34 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               {theme === "custom-palette" && (
                 <>
                   <button
-                  onClick={handleRandomizePalette}
-                  title="Generate random cohesive palette (respects locks)"
-                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  <Shuffle className="size-3.5" />
-                </button>
-                <button
-                  onClick={handleResetColors}
-                  title="Reset to default palette"
-                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  <RotateCcw className="size-3.5" />
-                </button>
-                <button
-                  onClick={undo}
-                  disabled={!canUndo}
-                  title="Undo last change (Ctrl+Z)"
-                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                >
-                  <Undo2 className="size-3.5" />
-                </button>
-                <button
-                  onClick={redo}
-                  disabled={!canRedo}
-                  title="Redo next change (Ctrl+Y)"
-                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                >
-                  <Redo2 className="size-3.5" />
+                    onClick={handleRandomizePalette}
+                    title="Generate random cohesive palette (respects locks)"
+                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    <Shuffle className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={handleResetColors}
+                    title="Reset to default palette"
+                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={undo}
+                    disabled={!canUndo}
+                    title="Undo last change (Ctrl+Z)"
+                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  >
+                    <Undo2 className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={redo}
+                    disabled={!canRedo}
+                    title="Redo next change (Ctrl+Y)"
+                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  >
+                    <Redo2 className="size-3.5" />
                   </button>
                 </>
               )}
@@ -1007,8 +1051,8 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 title="Toggle Contrast Accessibility (WCAG) Checker"
                 className={cn(
                   "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
-                  wcagExpanded 
-                    ? "bg-primary text-primary-foreground border border-primary shadow-sm" 
+                  wcagExpanded
+                    ? "bg-primary text-primary-foreground border border-primary shadow-sm"
                     : "bg-black/20 hover:bg-black/40 border border-white/10 text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -1233,121 +1277,177 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             </div>
           </div>
 
-          {/* Color Swatch Pickers Grid (Horizontal Scrolling) */}
-          <div className="w-full max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar pb-1">
-            <div className="flex items-center gap-3 shrink-0 mx-auto w-max px-2">
-              {/* Standard Pickers */}
-              <div className="flex items-center gap-3 shrink-0">
-              <DraggableColorPicker
-                colorKey="background" label="Bg" value={customColors.background}
-                onChange={(v) => setCustomColor("background", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
-              />
-              <DraggableColorPicker
-                colorKey="foreground" label="Text" value={customColors.foreground}
-                onChange={(v) => setCustomColor("foreground", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
-              />
-              <DraggableColorPicker
-                colorKey="card" label="Card" value={customColors.card}
-                onChange={(v) => setCustomColor("card", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
-              />
-              <DraggableColorPicker
-                colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
-                onChange={(v) => setCustomColor("cardForeground", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
-              />
-              <DraggableColorPicker
-                colorKey="primary" label="Accent" value={customColors.primary}
-                onChange={(v) => setCustomColor("primary", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
-              />
-              <DraggableColorPicker
-                colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
-                onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
-              />
-              <DraggableColorPicker
-                colorKey="secondary" label="Sec" value={customColors.secondary}
-                onChange={(v) => setCustomColor("secondary", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
-              />
-              <DraggableColorPicker
-                colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
-                onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
-              />
-              <DraggableColorPicker
-                colorKey="muted" label="Muted" value={customColors.muted}
-                onChange={(v) => setCustomColor("muted", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
-              />
-              <DraggableColorPicker
-                colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
-                onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
-              />
-              <DraggableColorPicker
-                colorKey="border" label="Border" value={customColors.border}
-                onChange={(v) => setCustomColor("border", v)} onSwap={handleSwapColors}
-                isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
+          {/* Shape & Format Sliders */}
+          <div className="px-3 pb-1 flex flex-wrap items-center gap-6 relative z-10">
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Format</label>
+              <Segmented<ColorFormat>
+                label=""
+                icon={<></>}
+                options={[
+                  { id: 'hex', label: 'HEX' },
+                  { id: 'rgb', label: 'RGB' },
+                  { id: 'hsl', label: 'HSL' },
+                  { id: 'oklch', label: 'OKLCH' },
+                ]}
+                value={colorFormat}
+                onChange={setColorFormat}
               />
             </div>
 
-            {/* Pedestal */}
-            {(activeDesign === "dholeish" || activeDesign === "rakery") && (
-              <>
-                <div className="w-px h-8 bg-white/20 shrink-0 mx-1" />
-                <div className="flex items-center">
-                <div
-                  className="grid transition-[grid-template-columns] duration-300 ease-in-out"
-                  style={{ gridTemplateColumns: pedestalColorsExpanded ? '1fr' : '0fr' }}
-                >
-                  <div className="overflow-hidden">
-                    <div className="flex items-center gap-3 pr-3 w-max">
-                      <DraggableColorPicker
-                        colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
-                        onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={handleSwapColors}
-                        isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
-                      />
-                      <DraggableColorPicker
-                        colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
-                        onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={handleSwapColors}
-                        isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
-                      />
-                      <DraggableColorPicker
-                        colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder}
-                        onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={handleSwapColors}
-                        isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
-                      />
-                      <DraggableColorPicker
-                        colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
-                        onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={handleSwapColors}
-                        isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
-                      />
-                      <DraggableColorPicker
-                        colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow}
-                        onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={handleSwapColors}
-                        isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
-                      />
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Radius</label>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.1"
+                value={customRadius ?? 0.5}
+                onChange={(e) => setCustomRadius(parseFloat(e.target.value))}
+                className="w-24 h-1.5 bg-black/40 rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <span className="text-[10px] text-muted-foreground w-6">{customRadius ?? 0.5}r</span>
+              <button
+                onClick={() => setCustomRadius(null)}
+                title="Reset to default radius"
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors ml-1"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {/* Color Swatch Pickers Grid */}
+          <div className="w-full pb-1 relative z-0">
+            <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-4">
+              {/* Standard Pickers */}
+              <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar pt-[80px] -mt-[80px] px-2 pb-2">
+                <DraggableColorPicker
+                  colorKey="background" label="Bg" value={customColors.background}
+                  onChange={(v) => setCustomColor("background", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="foreground" label="Text" value={customColors.foreground}
+                  onChange={(v) => setCustomColor("foreground", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="card" label="Card" value={customColors.card}
+                  onChange={(v) => setCustomColor("card", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
+                  onChange={(v) => setCustomColor("cardForeground", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="primary" label="Accent" value={customColors.primary}
+                  onChange={(v) => setCustomColor("primary", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
+                  onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="secondary" label="Sec" value={customColors.secondary}
+                  onChange={(v) => setCustomColor("secondary", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
+                  onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="muted" label="Muted" value={customColors.muted}
+                  onChange={(v) => setCustomColor("muted", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
+                  onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
+                  displayFormat={colorFormat}
+                />
+                <DraggableColorPicker
+                  colorKey="border" label="Border" value={customColors.border}
+                  onChange={(v) => setCustomColor("border", v)} onSwap={handleSwapColors}
+                  isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
+                  displayFormat={colorFormat}
+                />
+              </div>
+
+              {/* Pedestal */}
+              {(activeDesign === "dholeish" || activeDesign === "rakery") && (
+                <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar pt-[80px] -mt-[80px] px-2 pb-2">
+                  <div className="hidden 2xl:block w-px h-8 bg-white/20 shrink-0 mx-1" />
+                  <div className="flex items-center">
+                    <div
+                      className="grid transition-[grid-template-columns] duration-300 ease-in-out"
+                      style={{ gridTemplateColumns: pedestalColorsExpanded ? '1fr' : '0fr' }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="flex items-center gap-3 pr-3 w-max">
+                          <DraggableColorPicker
+                            colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
+                            onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={handleSwapColors}
+                            isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
+                            displayFormat={colorFormat}
+                          />
+                          <DraggableColorPicker
+                            colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
+                            onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={handleSwapColors}
+                            isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
+                            displayFormat={colorFormat}
+                          />
+                          <DraggableColorPicker
+                            colorKey="pedestalTopBorder" label="Ped Brdr" value={customColors.pedestalTopBorder}
+                            onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={handleSwapColors}
+                            isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
+                            displayFormat={colorFormat}
+                          />
+                          <DraggableColorPicker
+                            colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
+                            onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={handleSwapColors}
+                            isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
+                            displayFormat={colorFormat}
+                          />
+                          <DraggableColorPicker
+                            colorKey="pedestalShadow" label="Ped Shdw" value={customColors.pedestalShadow}
+                            onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={handleSwapColors}
+                            isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
+                            displayFormat={colorFormat}
+                          />
+                        </div>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setPedestalColorsExpanded(!pedestalColorsExpanded)}
+                      className="flex flex-col items-center gap-0.5 text-[9px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                    >
+                      <div className="size-6 rounded-full bg-black/20 border border-white/10 flex items-center justify-center hover:bg-black/40">
+                        <ChevronLeft className={cn("size-3.5 transition-transform duration-300", !pedestalColorsExpanded && "rotate-180")} />
+                      </div>
+                      <span>Pedestal</span>
+                    </button>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setPedestalColorsExpanded(!pedestalColorsExpanded)}
-                  className="flex flex-col items-center gap-0.5 text-[9px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-                >
-                  <div className="size-6 rounded-full bg-black/20 border border-white/10 flex items-center justify-center hover:bg-black/40">
-                    <ChevronLeft className={cn("size-3.5 transition-transform duration-300", !pedestalColorsExpanded && "rotate-180")} />
-                  </div>
-                  <span>Pedestal</span>
-                </button>
-              </div>
-              </>
-            )}
+              )}
             </div>
           </div>
         </div>
@@ -1356,105 +1456,105 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       {/* Contrast Accessibility Checker (Available in all modes) */}
       {mounted && wcagExpanded && (
         <div className="flex flex-col gap-2 border-t border-border/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full pt-1">
-                  {[
-                    {
-                      label: "Main Body",
-                      bgKey: "background" as keyof CustomColors,
-                      fgKey: "foreground" as keyof CustomColors,
-                    },
-                    {
-                      label: "Card Content",
-                      bgKey: "card" as keyof CustomColors,
-                      fgKey: "cardForeground" as keyof CustomColors,
-                    },
-                    {
-                      label: "Accent Button",
-                      bgKey: "primary" as keyof CustomColors,
-                      fgKey: "primaryForeground" as keyof CustomColors,
-                    },
-                    {
-                      label: "Muted Text",
-                      bgKey: "muted" as keyof CustomColors,
-                      fgKey: "mutedForeground" as keyof CustomColors,
-                    },
-                  ].map((pair) => {
-                    const bg = activeHexColors[pair.bgKey] || "#000000"
-                    const fg = activeHexColors[pair.fgKey] || "#ffffff"
-                    const info = getContrastInfo(bg, fg)
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full pt-1">
+            {[
+              {
+                label: "Main Body",
+                bgKey: "background" as keyof CustomColors,
+                fgKey: "foreground" as keyof CustomColors,
+              },
+              {
+                label: "Card Content",
+                bgKey: "card" as keyof CustomColors,
+                fgKey: "cardForeground" as keyof CustomColors,
+              },
+              {
+                label: "Accent Button",
+                bgKey: "primary" as keyof CustomColors,
+                fgKey: "primaryForeground" as keyof CustomColors,
+              },
+              {
+                label: "Muted Text",
+                bgKey: "muted" as keyof CustomColors,
+                fgKey: "mutedForeground" as keyof CustomColors,
+              },
+            ].map((pair) => {
+              const bg = activeHexColors[pair.bgKey] || "#000000"
+              const fg = activeHexColors[pair.fgKey] || "#ffffff"
+              const info = getContrastInfo(bg, fg)
 
-                    // Color coding for levels
-                    let levelBadgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                    if (info.level === "AAA") {
-                      levelBadgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    } else if (info.level === "AA") {
-                      levelBadgeClass = "bg-teal-500/10 text-teal-400 border border-teal-500/20"
-                    } else if (info.level === "AA Large") {
-                      levelBadgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                    }
+              // Color coding for levels
+              let levelBadgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+              if (info.level === "AAA") {
+                levelBadgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+              } else if (info.level === "AA") {
+                levelBadgeClass = "bg-teal-500/10 text-teal-400 border border-teal-500/20"
+              } else if (info.level === "AA Large") {
+                levelBadgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+              }
 
-                    // Tooltip text explanations and recommendations
-                    let tooltipTitle = ""
-                    let tooltipDesc = ""
-                    let tooltipAction = ""
+              // Tooltip text explanations and recommendations
+              let tooltipTitle = ""
+              let tooltipDesc = ""
+              let tooltipAction = ""
 
-                    if (info.level === "AAA") {
-                      tooltipTitle = "AAA - Enhanced Contrast (≥ 7.0:1)"
-                      tooltipDesc = "Excellent readability. Reads perfectly for all text sizes and users."
-                      tooltipAction = "No action needed. Outstanding accessibility!"
-                    } else if (info.level === "AA") {
-                      tooltipTitle = "AA - Minimum Contrast (≥ 4.5:1)"
-                      tooltipDesc = "Standard compliant. Good for body text and headings."
-                      tooltipAction = "To meet enhanced AAA standards, increase contrast further."
-                    } else if (info.level === "AA Large") {
-                      tooltipTitle = "AA Large - Large Text Only (≥ 3.0:1)"
-                      tooltipDesc = "Readable only for large text (18px+) or bold headers."
-                      tooltipAction = "Action: Make text darker or background lighter to pass for body text."
-                    } else {
-                      tooltipTitle = "Fail - Insufficient Contrast (< 3.0:1)"
-                      tooltipDesc = "Hard to read. Does not meet WCAG readability guidelines."
-                      tooltipAction = "Action: Adjust colors to increase contrast ratio to at least 4.5:1."
-                    }
+              if (info.level === "AAA") {
+                tooltipTitle = "AAA - Enhanced Contrast (≥ 7.0:1)"
+                tooltipDesc = "Excellent readability. Reads perfectly for all text sizes and users."
+                tooltipAction = "No action needed. Outstanding accessibility!"
+              } else if (info.level === "AA") {
+                tooltipTitle = "AA - Minimum Contrast (≥ 4.5:1)"
+                tooltipDesc = "Standard compliant. Good for body text and headings."
+                tooltipAction = "To meet enhanced AAA standards, increase contrast further."
+              } else if (info.level === "AA Large") {
+                tooltipTitle = "AA Large - Large Text Only (≥ 3.0:1)"
+                tooltipDesc = "Readable only for large text (18px+) or bold headers."
+                tooltipAction = "Action: Make text darker or background lighter to pass for body text."
+              } else {
+                tooltipTitle = "Fail - Insufficient Contrast (< 3.0:1)"
+                tooltipDesc = "Hard to read. Does not meet WCAG readability guidelines."
+                tooltipAction = "Action: Adjust colors to increase contrast ratio to at least 4.5:1."
+              }
 
-                    return (
-                      <div
-                        key={pair.label}
-                        className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/15 p-2"
-                      >
-                        <div
-                          className="size-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 border border-white/10 select-none shadow-inner"
-                          style={{ backgroundColor: bg, color: fg }}
-                        >
-                          Aa
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[10px] font-medium text-muted-foreground truncate leading-none mb-1">
-                            {pair.label}
-                          </span>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-mono font-bold leading-none text-foreground">
-                              {info.ratio.toFixed(1)}:1
-                            </span>
+              return (
+                <div
+                  key={pair.label}
+                  className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/15 p-2"
+                >
+                  <div
+                    className="size-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 border border-white/10 select-none shadow-inner"
+                    style={{ backgroundColor: bg, color: fg }}
+                  >
+                    Aa
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-medium text-muted-foreground truncate leading-none mb-1">
+                      {pair.label}
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-mono font-bold leading-none text-foreground">
+                        {info.ratio.toFixed(1)}:1
+                      </span>
 
-                            <div className="relative group/tooltip">
-                              <span className={cn("text-[9px] font-black uppercase px-1 py-0.5 rounded leading-none shrink-0 tracking-wider cursor-help", levelBadgeClass)}>
-                                {info.level}
-                              </span>
+                      <div className="relative group/tooltip">
+                        <span className={cn("text-[9px] font-black uppercase px-1 py-0.5 rounded leading-none shrink-0 tracking-wider cursor-help", levelBadgeClass)}>
+                          {info.level}
+                        </span>
 
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
-                                <span className="font-bold text-white leading-tight">{tooltipTitle}</span>
-                                <span className="text-zinc-400 leading-normal">{tooltipDesc}</span>
-                                <span className="text-primary font-semibold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
-                              </div>
-                            </div>
-                          </div>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
+                          <span className="font-bold text-white leading-tight">{tooltipTitle}</span>
+                          <span className="text-zinc-400 leading-normal">{tooltipDesc}</span>
+                          <span className="text-primary font-semibold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-          )}
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {mounted && showExportModal && createPortal(
         <div

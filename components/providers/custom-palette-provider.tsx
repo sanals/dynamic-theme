@@ -47,6 +47,10 @@ interface CustomPaletteContextValue {
   applyBulkColors: (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
   resetCustomColors: () => void
   swapColors: (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
+  
+  customRadius: number | null
+  setCustomRadius: (radius: number | null) => void
+
   undo: () => void
   redo: () => void
   canUndo: boolean
@@ -56,10 +60,12 @@ interface CustomPaletteContextValue {
 const CustomPaletteContext = createContext<CustomPaletteContextValue | null>(null)
 
 const STORAGE_KEY = "custom-palette-colors"
+const RADIUS_STORAGE_KEY = "custom-palette-radius"
 
 export function CustomPaletteProvider({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme()
   const [customColors, setCustomColors] = useState<CustomColors>(DEFAULT_CUSTOM_COLORS)
+  const [customRadius, setCustomRadiusState] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
 
   // Undo/Redo stacks
@@ -70,6 +76,7 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   const lastPushTime = useRef<number>(0)
 
   // Hydrate custom colors
+  // Load from localStorage on mount
   useEffect(() => {
     setMounted(true)
     try {
@@ -77,10 +84,23 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       if (stored) {
         setCustomColors({ ...DEFAULT_CUSTOM_COLORS, ...JSON.parse(stored) })
       }
+      const storedRadius = window.localStorage.getItem(RADIUS_STORAGE_KEY)
+      if (storedRadius) {
+        setCustomRadiusState(JSON.parse(storedRadius))
+      }
     } catch (e) {
       console.error("Failed to load custom colors", e)
     }
   }, [])
+
+  const setCustomRadius = (radius: number | null) => {
+    setCustomRadiusState(radius)
+    if (radius === null) {
+      window.localStorage.removeItem(RADIUS_STORAGE_KEY)
+    } else {
+      window.localStorage.setItem(RADIUS_STORAGE_KEY, JSON.stringify(radius))
+    }
+  }
 
   const pushToHistory = (stateToPush: CustomColors) => {
     setHistory((prev) => {
@@ -186,6 +206,7 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
     lastEditedKey.current = null
     lastPushTime.current = 0
     setCustomColors(DEFAULT_CUSTOM_COLORS)
+    setCustomRadius(null)
     window.localStorage.removeItem(STORAGE_KEY)
   }
 
@@ -233,6 +254,7 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       --pedestal-top-border: ${customColors.pedestalTopBorder};
       --pedestal-body: ${customColors.pedestalBody};
       --pedestal-shadow: ${customColors.pedestalShadow};
+      ${customRadius !== null ? `--radius: ${customRadius}rem;` : ''}
     }
   `
 
@@ -244,6 +266,8 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
         applyBulkColors,
         resetCustomColors,
         swapColors,
+        customRadius,
+        setCustomRadius,
         undo,
         redo,
         canUndo: history.length > 0,

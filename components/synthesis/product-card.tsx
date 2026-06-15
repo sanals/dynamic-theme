@@ -19,7 +19,7 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
       : "h-[190px] sm:h-[230px]"
 
   return (
-    <div className="group relative bg-card rounded-[1.25rem] shadow-xl shadow-foreground/5 overflow-hidden flex flex-col transition-transform hover:-translate-y-1">
+    <div className="group relative bg-card rounded-3xl shadow-xl shadow-foreground/5 overflow-hidden flex flex-col transition-transform hover:-translate-y-1">
       
       {/* Top Navigation Bar inside the card */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10">
@@ -57,7 +57,7 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
       </div>
 
       {/* Bottom Gray Inner Box */}
-      <div className="mx-3 mb-3 bg-secondary rounded-[1rem] p-4 sm:p-5 flex flex-col gap-4 z-10">
+      <div className="mx-3 mb-3 bg-secondary rounded-2xl p-4 sm:p-5 flex flex-col gap-4 z-10">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
             <svg viewBox="0 0 24 24" className="w-8 h-8 fill-foreground mb-1">
