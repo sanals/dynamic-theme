@@ -150,7 +150,8 @@
 [data-theme='design-variant-3'] {
   color-scheme: dark;
 
-  --background: oklch(0.38 0.03 240); /* Steel Blue / Muted Navy */
+  --background: oklch(0.38 0.03 240);
+  /* Steel Blue / Muted Navy */
   --foreground: oklch(0.95 0.01 240);
 
   --card: oklch(0.42 0.03 240);
@@ -226,10 +227,13 @@
 [data-theme='design-variant-5'] {
   color-scheme: light;
 
-  --background: oklch(1 0 0); /* Pure white background */
-  --foreground: oklch(0.2 0.01 260); /* Dark slate for text */
+  --background: oklch(1 0 0);
+  /* Pure white background */
+  --foreground: oklch(0.2 0.01 260);
+  /* Dark slate for text */
 
-  --card: oklch(0.96 0.005 260); /* Off-white for cards to stand out */
+  --card: oklch(0.96 0.005 260);
+  /* Off-white for cards to stand out */
   --card-foreground: oklch(0.2 0.01 260);
 
   --popover: oklch(1 0 0);
@@ -253,7 +257,8 @@
   --input: oklch(0.2 0.01 260 / 12%);
   --ring: oklch(0.2 0.01 260);
 
-  --radius: 1rem; /* Slightly less rounded */
+  --radius: 1rem;
+  /* Slightly less rounded */
 }
 
 /*
@@ -302,10 +307,13 @@
 [data-theme='design-variant-7'] {
   color-scheme: dark;
 
-  --background: #2e4f3a; /* Lighter, more pleasant forest green */
-  --foreground: #e3edda; /* Pale warm green/white text */
+  --background: #2e4f3a;
+  /* Lighter, more pleasant forest green */
+  --foreground: #e3edda;
+  /* Pale warm green/white text */
 
-  --card: #3f634b; /* Pleasant green for cards */
+  --card: #3f634b;
+  /* Pleasant green for cards */
   --card-foreground: #e3edda;
 
   --popover: #2e4f3a;
@@ -318,14 +326,16 @@
   --secondary-foreground: #e3edda;
 
   --muted: #3f634b;
-  --muted-foreground: #9eb5a5; /* Dimmer text */
+  --muted-foreground: #9eb5a5;
+  /* Dimmer text */
 
   --accent: #5c8661;
   --accent-foreground: #e3edda;
 
   --destructive: #cc4444;
 
-  --border: #608c6c; /* Bright inner border */
+  --border: #608c6c;
+  /* Bright inner border */
   --input: #5c8661;
   --ring: #e3edda;
 
@@ -386,43 +396,25 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
 
-  /*
-    Theme Transition Animations
-    ---------------------------
-    Smooth crossfade when switching palettes. Excludes interactive
-    elements and the design widget to avoid visual interference.
+  /* 
+    Global transitions removed. 
+    Applying transitions to `*` causes massive style recalculation storms and lag during theme swaps.
   */
-  *,
-  *::before,
-  *::after {
-    transition-property: background-color, color, border-color, box-shadow, fill, stroke, outline-color;
-    transition-duration: 300ms;
-    transition-timing-function: ease-out;
-  }
-
-  /* Exclude elements where transitions would feel wrong or cause jank */
-  input,
-  textarea,
-  select,
-  canvas,
-  video,
-  [type="color"],
-  [data-no-transition],
-  .transition-none {
-    transition-property: none !important;
-  }
 }
 
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+
   &::-webkit-scrollbar {
     display: none;
   }
