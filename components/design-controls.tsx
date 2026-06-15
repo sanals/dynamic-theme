@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
-import { createPortal } from "react-dom"
+import { createPortal, flushSync } from "react-dom"
 import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye } from "lucide-react"
 import {
   designs,
@@ -292,10 +292,26 @@ function DraggableColorPicker({
 }
 
 export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
-  const { theme, setTheme } = useTheme()
-  const { activeLayoutStructure, setLayoutStructure } = useLayoutStructure()
-  const { activeDesign, setDesign } = useDesign()
+  const { theme, setTheme: _setTheme } = useTheme()
+  const { activeLayoutStructure, setLayoutStructure: _setLayoutStructure } = useLayoutStructure()
+  const { activeDesign, setDesign: _setDesign } = useDesign()
   const { activeFont, setFont, setCustomFont } = useFont()
+
+  // View Transition Wrappers
+  const setTheme = (newTheme: string) => {
+    if (!document.startViewTransition) return _setTheme(newTheme)
+    document.startViewTransition(() => flushSync(() => _setTheme(newTheme)))
+  }
+
+  const setLayoutStructure = (newLayout: LayoutStructure) => {
+    if (!document.startViewTransition) return _setLayoutStructure(newLayout)
+    document.startViewTransition(() => flushSync(() => _setLayoutStructure(newLayout)))
+  }
+
+  const setDesign = (newDesign: DesignId) => {
+    if (!document.startViewTransition) return _setDesign(newDesign)
+    document.startViewTransition(() => flushSync(() => _setDesign(newDesign)))
+  }
   const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors, undo, redo, canUndo, canRedo } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
