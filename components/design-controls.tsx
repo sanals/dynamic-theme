@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -20,7 +20,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
-import { getContrastInfo, extractDominantColor } from "@/lib/color-utils"
+import { getContrastInfo, extractDominantColor, autoFixContrast } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
 import { POPULAR_GOOGLE_FONTS } from "@/lib/popular-fonts"
@@ -160,8 +160,8 @@ function Segmented<T extends string>({
             className={cn(
               "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
               value === opt.id
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-foreground text-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-foreground/10",
             )}
           >
             {opt.label}
@@ -283,7 +283,7 @@ function DraggableColorPicker({
           }
         }}
         placeholder="#000000"
-        className="w-[68px] text-[11px] bg-black/30 border border-white/10 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5"
+        className="w-[68px] text-[11px] bg-background/50 border border-border/50 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5"
       />
     </div>
   )
@@ -655,6 +655,44 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       // Reset input so the same image can be uploaded again if needed
       if (imageFileInputRef.current) imageFileInputRef.current.value = ""
     }
+  }
+
+  const handleAutoFixWcag = () => {
+    if (theme !== "custom-palette") return
+
+    const bg = customColors.background || "#000000"
+    const newFg = autoFixContrast(bg, customColors.foreground || "#ffffff", 4.5)
+    
+    const cardBg = customColors.card || "#000000"
+    const newCardFg = autoFixContrast(cardBg, customColors.cardForeground || "#ffffff", 4.5)
+
+    const primaryBg = customColors.primary || "#000000"
+    const newPrimaryFg = autoFixContrast(primaryBg, customColors.primaryForeground || "#ffffff", 4.5)
+
+    const mutedBg = customColors.muted || "#000000"
+    const newMutedFg = autoFixContrast(mutedBg, customColors.mutedForeground || "#ffffff", 4.5)
+
+    const secondaryBg = customColors.secondary || "#000000"
+    const newSecondaryFg = autoFixContrast(secondaryBg, customColors.secondaryForeground || "#ffffff", 4.5)
+
+    applyBulkColors([
+      customColors.background,
+      newFg,
+      customColors.card,
+      newCardFg,
+      customColors.primary,
+      newPrimaryFg,
+      customColors.secondary,
+      newSecondaryFg,
+      customColors.muted,
+      newMutedFg,
+      customColors.border,
+      customColors.pedestalGlow,
+      customColors.pedestalTop,
+      customColors.pedestalTopBorder,
+      customColors.pedestalBody,
+      customColors.pedestalShadow,
+    ])
   }
 
   const handleRandomizePalette = () => {
@@ -1119,12 +1157,12 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               {(presetsExpanded ? presets : presets.slice(0, maxVisiblePresets)).map((preset) => (
                 <div
                   key={preset.id}
-                  className="group/preset relative flex items-center gap-1.5 shrink-0 rounded-full border border-white/10 bg-black/20 pl-2 pr-1.5 py-0.5 hover:bg-black/40 hover:border-white/20 transition-all"
+                  className="group/preset relative flex items-center gap-1.5 shrink-0 rounded-full border border-foreground/10 bg-foreground/5 pl-2 pr-1.5 py-0.5 hover:bg-foreground/10 hover:border-foreground/20 transition-all text-foreground/80 hover:text-foreground"
                 >
                   <button
                     type="button"
                     onClick={() => handleApplyPreset(preset)}
-                    className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-1.5 text-[10px] font-medium transition-colors"
                   >
                     {/* 4 dots for preview */}
                     <div className="flex -space-x-1 shrink-0">
@@ -1151,7 +1189,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 <button
                   type="button"
                   onClick={() => setPresetsExpanded(!presetsExpanded)}
-                  className="shrink-0 rounded-full border border-dashed border-white/20 bg-black/10 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:border-white/30 transition-all cursor-pointer"
+                  className="shrink-0 rounded-full border border-dashed border-foreground/20 bg-foreground/5 px-2.5 py-0.5 text-[10px] font-medium text-foreground/80 hover:text-foreground hover:border-foreground/30 transition-all cursor-pointer"
                 >
                   {presetsExpanded ? "Show less" : `+${presets.length - maxVisiblePresets} more`}
                 </button>
@@ -1163,7 +1201,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 <button
                   type="button"
                   onClick={() => setShowSaveInput(true)}
-                  className="h-6 px-2.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-[10px] font-semibold cursor-pointer border border-primary/30 shadow-sm"
+                  className="h-6 px-2.5 rounded bg-foreground text-background hover:bg-foreground/90 transition-colors text-[10px] font-semibold cursor-pointer shadow-sm"
                 >
                   + Save Current
                 </button>
@@ -1174,7 +1212,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                     value={newPresetName}
                     onChange={(e) => setNewPresetName(e.target.value)}
                     placeholder="Name..."
-                    className="h-6 text-[10px] bg-black/40 border border-white/10 rounded px-2 w-20 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    className="h-6 text-[10px] bg-background border border-border rounded px-2 w-20 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSavePreset()
                       if (e.key === "Escape") {
@@ -1187,7 +1225,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   <button
                     type="button"
                     onClick={handleSavePreset}
-                    className="h-6 px-2.5 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+                    className="h-6 px-2.5 rounded bg-foreground text-background text-[10px] font-medium hover:bg-foreground/90 transition-colors cursor-pointer"
                   >
                     Save
                   </button>
@@ -1418,7 +1456,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                     if (e.key === "Enter") handleGenerateAiTheme()
                   }}
                   disabled={isGeneratingAi || isExtractingImage}
-                  className="flex-1 min-w-0 bg-transparent border-none text-[10px] text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
+                  className="flex-1 min-w-0 bg-transparent border-none text-[10px] text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground"
                 />
 
                 <button
@@ -1624,7 +1662,21 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       {/* Contrast Accessibility Checker (Available in all modes) */}
       {mounted && wcagExpanded && (
         <div className="flex flex-col gap-2 border-t border-border/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full pt-1">
+          <div className="flex items-center justify-between pb-1">
+             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Accessibility (WCAG)</span>
+             {theme === "custom-palette" && (
+               <button
+                 type="button"
+                 onClick={handleAutoFixWcag}
+                 title="Automatically adjust foreground colors to pass AA contrast"
+                 className="flex items-center gap-1.5 h-6 px-2.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 hover:text-emerald-300 transition-colors text-[10px] font-semibold cursor-pointer"
+               >
+                 <Wand2 className="size-3" />
+                 Auto-Fix All
+               </button>
+             )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 w-full">
             {[
               {
                 label: "Main Body",
@@ -1640,6 +1692,11 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 label: "Accent Button",
                 bgKey: "primary" as keyof CustomColors,
                 fgKey: "primaryForeground" as keyof CustomColors,
+              },
+              {
+                label: "Secondary Btn",
+                bgKey: "secondary" as keyof CustomColors,
+                fgKey: "secondaryForeground" as keyof CustomColors,
               },
               {
                 label: "Muted Text",

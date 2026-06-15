@@ -89,6 +89,49 @@ export function getContrastInfo(bgHex: string, fgHex: string): ContrastResult {
   return { ratio, level }
 }
 
+function interpolateColor(hex1: string, hex2: string, factor: number): string {
+  const c1 = hexToRgb(hex1) || { r: 0, g: 0, b: 0 }
+  const c2 = hexToRgb(hex2) || { r: 0, g: 0, b: 0 }
+  const r = Math.round(c1.r + (c2.r - c1.r) * factor)
+  const g = Math.round(c1.g + (c2.g - c1.g) * factor)
+  const b = Math.round(c1.b + (c2.b - c1.b) * factor)
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+}
+
+/**
+ * Automatically adjusts the foreground color to meet the target WCAG contrast ratio against the background.
+ * Uses a binary search to find the minimal color shift required.
+ */
+export function autoFixContrast(bgHex: string, fgHex: string, targetRatio: number = 4.5): string {
+  const currentRatio = getContrastRatio(bgHex, fgHex)
+  if (currentRatio >= targetRatio) return fgHex
+
+  const bgLum = getRelativeLuminance(bgHex)
+  
+  // If background is dark (luminance < 0.3), we target white. Otherwise, black.
+  // 0.3 is a good heuristic threshold.
+  const targetHex = bgLum < 0.3 ? "#FFFFFF" : "#000000"
+
+  let low = 0
+  let high = 1
+  let best = targetHex
+
+  // Binary search for the minimum blending factor
+  for (let i = 0; i < 15; i++) {
+    const mid = (low + high) / 2
+    const testHex = interpolateColor(fgHex, targetHex, mid)
+    const ratio = getContrastRatio(bgHex, testHex)
+    
+    if (ratio >= targetRatio) {
+      best = testHex
+      high = mid // Try to find a color closer to original
+    } else {
+      low = mid // Need more contrast, blend closer to target
+    }
+  }
+
+  return best
+}
 
 /**
  * Extracts a dominant colorful hex from an image file using Canvas.
