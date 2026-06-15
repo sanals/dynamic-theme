@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2 } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -260,7 +260,16 @@ function DraggableColorPicker({
           setIsHoveringInput(true)
           e.target.select()
         }}
+        onClick={(e) => e.currentTarget.select()}
         onBlur={() => setIsHoveringInput(false)}
+        onPaste={(e) => {
+          const pastedText = e.clipboardData.getData("Text").trim()
+          if (/^#?[0-9a-fA-F]{3,8}$/.test(pastedText)) {
+            e.preventDefault()
+            const val = pastedText.replace(/#/g, "")
+            onChange("#" + val)
+          }
+        }}
         onChange={(e) => {
           let val = e.target.value.trim()
           // Strip out all hashtags first and prepend exactly one to prevent double hashtags
@@ -288,6 +297,14 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [fontDropdownOpen, setFontDropdownOpen] = useState(false)
+  const [shareDropdownOpen, setShareDropdownOpen] = useState(false)
+  const [wcagExpanded, setWcagExpanded] = useState(false)
+  const [extendedColorsExpanded, setExtendedColorsExpanded] = useState(false)
+  const [pedestalColorsExpanded, setPedestalColorsExpanded] = useState(false)
+  const [presetsExpanded, setPresetsExpanded] = useState(false)
+  const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)
+  const presetsContainerRef = useRef<HTMLDivElement>(null)
 
   const handleCaptureSnapshot = () => {
     const activeThemeName = theme === "custom-palette" ? "Custom" : theme || "Default"
@@ -356,18 +373,18 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
         }
       }
     } as any)
-    .then((dataUrl) => {
-      const link = document.createElement("a")
-      link.download = `design-theme-${activeDesign}-${Date.now()}.png`
-      link.href = dataUrl
-      link.click()
-      setCapturingPng(false)
-    })
-    .catch((err) => {
-      console.error("Screenshot capture failed", err)
-      alert("Failed to capture screenshot. Please try again.")
-      setCapturingPng(false)
-    })
+      .then((dataUrl) => {
+        const link = document.createElement("a")
+        link.download = `design-theme-${activeDesign}-${Date.now()}.png`
+        link.href = dataUrl
+        link.click()
+        setCapturingPng(false)
+      })
+      .catch((err) => {
+        console.error("Screenshot capture failed", err)
+        alert("Failed to capture screenshot. Please try again.")
+        setCapturingPng(false)
+      })
   }
 
   const [lastDefaultPalettes, setLastDefaultPalettes] = useState<Record<DesignId, ColorPalette>>({
@@ -381,6 +398,37 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
 
   // next-themes only knows the resolved theme on the client.
   useEffect(() => setMounted(true), [])
+
+  // Close dropdowns on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setFontDropdownOpen(false)
+        setShareDropdownOpen(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  // Responsive preset count based on container width
+  useEffect(() => {
+    const el = presetsContainerRef.current
+    if (!el) return
+
+    const PRESET_PILL_WIDTH = 120 // approximate width of each preset pill in px
+    const GAP = 8 // gap-2 = 8px
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width
+        const fits = Math.max(3, Math.floor((containerWidth + GAP) / (PRESET_PILL_WIDTH + GAP)))
+        setMaxVisiblePresets(fits)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [mounted, theme])
 
   const toggleLock = (key: keyof CustomColors) => {
     setLockedColors((prev) => ({
@@ -449,7 +497,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       ]
       return keysToCompare.every(key => p.colors[key] === customColors[key])
     })
-    
+
     if (colorExists) {
       setPresetError(`Same colors as "${colorExists.name}"`)
       setTimeout(() => setPresetError(null), 3000)
@@ -466,7 +514,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     }
     const updatedPresets = [...presets, newPreset]
     setPresets(updatedPresets)
-    
+
     // Save only custom ones to localStorage
     const customOnly = updatedPresets.filter(p => p.isCustom)
     window.localStorage.setItem("custom-palette-presets", JSON.stringify(customOnly))
@@ -565,8 +613,11 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     // Regex for 8, 6 or 3 digit hex colors
     const regex = /#([a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{3})\b/g
     const matches = text.match(regex)
-    if (matches && matches.length >= 11) {
+    if (matches && matches.length > 0) {
       applyBulkColors(matches)
+      if (theme !== "custom-palette") {
+        setTheme("custom-palette")
+      }
       // Clear the input
       e.target.value = ""
     }
@@ -767,54 +818,114 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             onChange={setLayoutStructure}
           />
         )}
-        <Segmented<FontPairingId>
-          label="Font"
-          icon={<Type className="size-3.5" aria-hidden />}
-          options={Object.values(fontPairings)}
-          value={mounted ? activeFont : undefined}
-          onChange={setFont}
-        />
-        {activeFont === "custom" && (
-          <div className="relative">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="cursor-pointer h-7 flex items-center gap-1.5 px-2 rounded bg-primary/20 hover:bg-primary/30 border border-primary/30 transition-colors text-xs font-medium text-primary-foreground"
-            >
-              <Upload className="size-3.5" />
-              Upload Font
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".woff2,.ttf,.otf"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                try {
-                  const familyName = `CustomFont_${Date.now()}`
-                  await setCustomFont(file, familyName)
-                } catch (err) {
-                  console.error(err)
-                }
-                // clear the input so same file can be uploaded again if needed
-                e.target.value = ""
-              }}
-            />
-          </div>
-        )}
+        {/* Font Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
+            className={cn(
+              "h-7 flex items-center gap-1.5 px-2.5 rounded-lg border transition-all text-xs font-medium cursor-pointer",
+              fontDropdownOpen
+                ? "bg-primary/15 border-primary/40 text-foreground"
+                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-border/80"
+            )}
+          >
+            <Type className="size-3.5" aria-hidden />
+            <span className="max-w-[120px] truncate">{mounted ? (fontPairings[activeFont]?.label || "Font") : "Font"}</span>
+            <ChevronDown className={cn("size-3 transition-transform duration-200", fontDropdownOpen && "rotate-180")} />
+          </button>
+          {fontDropdownOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onPointerDown={() => setFontDropdownOpen(false)} />
+              <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] py-1.5 rounded-xl border border-white/10 bg-background/95 backdrop-blur-lg shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                {Object.values(fontPairings).filter(fp => fp.id !== "custom").map((fp) => (
+                  <button
+                    key={fp.id}
+                    type="button"
+                    onClick={() => { setFont(fp.id); setFontDropdownOpen(false) }}
+                    className={cn(
+                      "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
+                      activeFont === fp.id
+                        ? "bg-primary/15 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    )}
+                  >
+                    {activeFont === fp.id && <Check className="size-3" />}
+                    <span className={activeFont === fp.id ? "" : "ml-5"}>{fp.label}</span>
+                  </button>
+                ))}
+                <div className="border-t border-white/10 mt-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setFont("custom"); setFontDropdownOpen(false) }}
+                    className={cn(
+                      "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
+                      activeFont === "custom"
+                        ? "bg-primary/15 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    )}
+                  >
+                    {activeFont === "custom" && <Check className="size-3" />}
+                    <span className={activeFont === "custom" ? "" : "ml-5"}>Custom Upload</span>
+                  </button>
+                  {activeFont === "custom" && (
+                    <button
+                      type="button"
+                      onClick={() => { fileInputRef.current?.click(); setFontDropdownOpen(false) }}
+                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-primary hover:bg-white/5 transition-colors flex items-center gap-2 ml-5"
+                    >
+                      <Upload className="size-3" />
+                      Upload .woff2 / .ttf / .otf
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".woff2,.ttf,.otf"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              try {
+                const familyName = `CustomFont_${Date.now()}`
+                await setCustomFont(file, familyName)
+              } catch (err) {
+                console.error(err)
+              }
+              e.target.value = ""
+            }}
+          />
+        </div>
 
         {mounted && (
-          <div className="flex items-center gap-1.5 ml-1 pl-3 border-l border-border/50 h-7">
-            {theme === "custom-palette" && (
-              <>
-                <input
-                  type="text"
-                  placeholder="Paste #colors..."
-                  onChange={handleBulkPaste}
-                  className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button
+          <div className="flex items-center gap-1 ml-1 pl-3 border-l border-border/50 h-7">
+            {/* Edit cluster */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleCopyPalette}
+                title="Copy current palette to clipboard"
+                className={cn(
+                  "h-6 px-2 flex items-center justify-center gap-1.5 rounded transition-colors text-[10px] font-bold cursor-pointer border shadow-sm",
+                  copied
+                    ? "bg-green-500 text-black border-green-600"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground border-primary/50"
+                )}
+              >
+                {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                Copy Palette
+              </button>
+              <input
+                type="text"
+                placeholder="Paste palette"
+                onChange={handleBulkPaste}
+                className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {theme === "custom-palette" && (
+                <>
+                  <button
                   onClick={handleRandomizePalette}
                   title="Generate random cohesive palette (respects locks)"
                   className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
@@ -843,76 +954,129 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                 >
                   <Redo2 className="size-3.5" />
-                </button>
-              </>
-            )}
-            {theme !== "custom-palette" && (() => {
-              const pair = darkLightPairs[activeDesign]
-              const isDark = theme === pair.dark
-              return (
-                <button
-                  onClick={() => setTheme(isDark ? pair.light : pair.dark)}
-                  title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-                </button>
-              )
-            })()}
-            <button
-              onClick={handleToggleComparison}
-              title={isComparisonMode ? "Exit comparison mode" : "Enter comparison mode (splits screen to compare designs)"}
-              className={cn(
-                "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
-                isComparisonMode 
-                  ? "bg-primary text-primary-foreground border border-primary shadow-sm" 
-                  : "bg-black/20 hover:bg-black/40 border border-white/10 text-muted-foreground hover:text-foreground"
+                  </button>
+                </>
               )}
-            >
-              <Columns className="size-3.5" />
-              <span className="text-[10px] hidden sm:inline">Compare</span>
-            </button>
-            {isComparisonMode && (
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-4 bg-border/30 mx-0.5" />
+
+            {/* View cluster */}
+            <div className="flex items-center gap-1">
               <button
-                onClick={handleCaptureSnapshot}
-                title="Capture current layout & styles as the comparison snapshot"
-                className="h-6 px-1.5 flex items-center justify-center gap-1.5 rounded bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/35 text-amber-300 transition-colors text-[10px] font-bold cursor-pointer"
+                onClick={() => setWcagExpanded(!wcagExpanded)}
+                title="Toggle Contrast Accessibility (WCAG) Checker"
+                className={cn(
+                  "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
+                  wcagExpanded 
+                    ? "bg-primary text-primary-foreground border border-primary shadow-sm" 
+                    : "bg-black/20 hover:bg-black/40 border border-white/10 text-muted-foreground hover:text-foreground"
+                )}
               >
-                Pin Reference
+                <Eye className="size-3.5" />
+                <span className="text-[10px] hidden sm:inline">WCAG</span>
               </button>
-            )}
-            <button
-              onClick={handleCopyPalette}
-              title="Copy current palette to clipboard"
-              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-            >
-              {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
-            </button>
-            <button
-              onClick={() => {
-                setShowExportModal(true)
-                setExportCopied(false)
-              }}
-              title="Export theme as CSS/JSON"
-              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <Download className="size-3.5" />
-            </button>
-            <button
-              onClick={handleShareLink}
-              title="Copy shareable link with current configuration"
-              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              {shareCopied ? <Check className="size-3.5 text-green-500" /> : <Share2 className="size-3.5" />}
-            </button>
-            <button
-              onClick={handleScreenshot}
-              disabled={capturingPng}
-              title={capturingPng ? "Capturing PNG..." : "Download showcase screenshot as PNG"}
-              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 cursor-pointer"
-            >
-              <Camera className="size-3.5" />
-            </button>
+              {theme !== "custom-palette" && (() => {
+                const pair = darkLightPairs[activeDesign]
+                const isDark = theme === pair.dark
+                return (
+                  <button
+                    onClick={() => setTheme(isDark ? pair.light : pair.dark)}
+                    title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                  </button>
+                )
+              })()}
+              <button
+                onClick={handleToggleComparison}
+                title={isComparisonMode ? "Exit comparison mode" : "Enter comparison mode (splits screen to compare designs)"}
+                className={cn(
+                  "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
+                  isComparisonMode
+                    ? "bg-primary text-primary-foreground border border-primary shadow-sm"
+                    : "bg-black/20 hover:bg-black/40 border border-white/10 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Columns className="size-3.5" />
+                <span className="text-[10px] hidden sm:inline">Compare</span>
+              </button>
+              {isComparisonMode && (
+                <button
+                  onClick={handleCaptureSnapshot}
+                  title="Capture current layout & styles as the comparison snapshot"
+                  className="h-6 px-1.5 flex items-center justify-center gap-1.5 rounded bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/35 text-amber-300 transition-colors text-[10px] font-bold cursor-pointer"
+                >
+                  Pin Reference
+                </button>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-4 bg-border/30 mx-0.5" />
+
+            {/* Share & Copy cluster */}
+            <div className="flex items-center gap-1.5">
+              {/* Unified Share Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShareDropdownOpen(!shareDropdownOpen)}
+                  title="Share & export options"
+                  className={cn(
+                    "h-6 w-6 flex items-center justify-center rounded border transition-colors cursor-pointer",
+                    shareDropdownOpen
+                      ? "bg-primary/20 border-primary/40 text-primary"
+                      : "bg-black/20 hover:bg-black/40 border-white/10 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Share2 className="size-3.5" />
+                </button>
+                {shareDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onPointerDown={() => setShareDropdownOpen(false)} />
+                    <div className="absolute top-full right-0 mt-1.5 z-50 min-w-[180px] py-1.5 rounded-xl border border-white/10 bg-background/95 backdrop-blur-lg shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <button
+                        type="button"
+                        onClick={() => { handleShareLink(); setShareDropdownOpen(false) }}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex items-center gap-2.5"
+                      >
+                        <Link2 className="size-3.5" />
+                        {shareCopied ? "Link Copied!" : "Copy Shareable Link"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { handleScreenshot(); setShareDropdownOpen(false) }}
+                        disabled={capturingPng}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex items-center gap-2.5 disabled:opacity-50"
+                      >
+                        <Camera className="size-3.5" />
+                        {capturingPng ? "Capturing…" : "Download Screenshot"}
+                      </button>
+                      <div className="h-px bg-white/10 my-1 mx-2" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowExportModal(true)
+                          setExportCopied(false)
+                          setShareDropdownOpen(false)
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex items-center gap-2.5"
+                      >
+                        <Download className="size-3.5" />
+                        Export CSS / JSON
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-4 bg-border/30 mx-0.5" />
+
+            {/* Minimize */}
             <button
               onClick={onMinimize}
               title="Minimize panel"
@@ -928,64 +1092,13 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       {mounted && theme === "custom-palette" && (
         <div className="flex flex-col gap-3.5 border-t border-border/20 pt-3.5 w-full">
           {/* Presets Library */}
-          <div className="flex flex-col gap-2 w-full px-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Palette Presets</span>
-              {!showSaveInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowSaveInput(true)}
-                  className="text-[10px] text-primary hover:text-primary/80 transition-colors font-medium"
-                >
-                  + Save Current
-                </button>
-              ) : (
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      value={newPresetName}
-                      onChange={(e) => setNewPresetName(e.target.value)}
-                      placeholder="Preset name..."
-                      className="h-5 text-[10px] bg-black/40 border border-white/10 rounded px-1.5 w-24 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSavePreset()
-                        if (e.key === "Escape") {
-                          setShowSaveInput(false)
-                          setNewPresetName("")
-                          setPresetError(null)
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSavePreset}
-                      className="h-5 px-2 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSaveInput(false)
-                        setNewPresetName("")
-                        setPresetError(null)
-                      }}
-                      className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  {presetError && (
-                    <span className="text-[9px] text-red-400 font-medium animate-pulse pr-1">
-                      {presetError}
-                    </span>
-                  )}
-                </div>
-              )}
+          <div className="flex items-center gap-3 w-full px-1">
+            <div className="flex items-center justify-center shrink-0">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Presets</span>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1.5 no-scrollbar scroll-smooth w-full">
-              {presets.map((preset) => (
+            <div className="w-px h-6 bg-border/30 shrink-0 hidden sm:block" />
+            <div ref={presetsContainerRef} className="flex gap-2 flex-wrap items-center w-full min-w-0">
+              {(presetsExpanded ? presets : presets.slice(0, maxVisiblePresets)).map((preset) => (
                 <div
                   key={preset.id}
                   className="group/preset relative flex items-center gap-1.5 shrink-0 rounded-full border border-white/10 bg-black/20 pl-2 pr-1.5 py-0.5 hover:bg-black/40 hover:border-white/20 transition-all"
@@ -1016,205 +1129,297 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   )}
                 </div>
               ))}
+              {presets.length > maxVisiblePresets && (
+                <button
+                  type="button"
+                  onClick={() => setPresetsExpanded(!presetsExpanded)}
+                  className="shrink-0 rounded-full border border-dashed border-white/20 bg-black/10 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:border-white/30 transition-all cursor-pointer"
+                >
+                  {presetsExpanded ? "Show less" : `+${presets.length - maxVisiblePresets} more`}
+                </button>
+              )}
+            </div>
+
+            <div className="w-px h-6 bg-border/30 shrink-0 hidden sm:block ml-auto" />
+            <div className="shrink-0 flex items-center justify-end pl-1 sm:pl-0">
+              {!showSaveInput ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSaveInput(true)}
+                  className="h-6 px-2.5 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-[10px] font-semibold cursor-pointer border border-primary/30 shadow-sm"
+                >
+                  + Save Current
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-black/20 p-1 rounded-lg border border-white/10 shadow-sm animate-in fade-in slide-in-from-right-2 relative">
+                  <input
+                    type="text"
+                    value={newPresetName}
+                    onChange={(e) => setNewPresetName(e.target.value)}
+                    placeholder="Name..."
+                    className="h-6 text-[10px] bg-black/40 border border-white/10 rounded px-2 w-20 text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSavePreset()
+                      if (e.key === "Escape") {
+                        setShowSaveInput(false)
+                        setNewPresetName("")
+                        setPresetError(null)
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSavePreset}
+                    className="h-6 px-2.5 rounded bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSaveInput(false)
+                      setNewPresetName("")
+                      setPresetError(null)
+                    }}
+                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  {presetError && (
+                    <span className="absolute -top-6 right-0 text-[9px] text-red-400 font-medium animate-pulse bg-background/90 px-1 rounded border border-red-500/30 whitespace-nowrap">
+                      {presetError}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Color Swatch Pickers Grid */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-1 w-full">
-            <DraggableColorPicker
-              colorKey="background" label="Bg" value={customColors.background}
-              onChange={(v) => setCustomColor("background", v)} onSwap={swapColors}
-              isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
-            />
-            <DraggableColorPicker
-              colorKey="foreground" label="Text" value={customColors.foreground}
-              onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors}
-              isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
-            />
-            <DraggableColorPicker
-              colorKey="card" label="Card" value={customColors.card}
-              onChange={(v) => setCustomColor("card", v)} onSwap={swapColors}
-              isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
-            />
-            <DraggableColorPicker
-              colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
-              onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors}
-              isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
-            />
-            <DraggableColorPicker
-              colorKey="primary" label="Accent" value={customColors.primary}
-              onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors}
-              isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
-            />
-            <DraggableColorPicker
-              colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
-              onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors}
-              isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
-            />
-            <DraggableColorPicker
-              colorKey="secondary" label="Sec" value={customColors.secondary}
-              onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors}
-              isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
-            />
-            <DraggableColorPicker
-              colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
-              onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors}
-              isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
-            />
-            <DraggableColorPicker
-              colorKey="muted" label="Muted" value={customColors.muted}
-              onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors}
-              isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
-            />
-            <DraggableColorPicker
-              colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
-              onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors}
-              isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
-            />
-            <DraggableColorPicker
-              colorKey="border" label="Border" value={customColors.border}
-              onChange={(v) => setCustomColor("border", v)} onSwap={swapColors}
-              isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
-            />
+          {/* Color Swatch Pickers Grid (Horizontal Scrolling) */}
+          <div className="w-full max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-3 shrink-0 mx-auto w-max px-2">
+              {/* Standard Pickers */}
+              <div className="flex items-center gap-3 shrink-0">
+              <DraggableColorPicker
+                colorKey="background" label="Bg" value={customColors.background}
+                onChange={(v) => setCustomColor("background", v)} onSwap={swapColors}
+                isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
+              />
+              <DraggableColorPicker
+                colorKey="foreground" label="Text" value={customColors.foreground}
+                onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors}
+                isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
+              />
+              <DraggableColorPicker
+                colorKey="card" label="Card" value={customColors.card}
+                onChange={(v) => setCustomColor("card", v)} onSwap={swapColors}
+                isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
+              />
+              <DraggableColorPicker
+                colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
+                onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors}
+                isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
+              />
+              <DraggableColorPicker
+                colorKey="primary" label="Accent" value={customColors.primary}
+                onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors}
+                isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
+              />
+              <DraggableColorPicker
+                colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
+                onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors}
+                isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
+              />
+              <DraggableColorPicker
+                colorKey="secondary" label="Sec" value={customColors.secondary}
+                onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors}
+                isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
+              />
+              <DraggableColorPicker
+                colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
+                onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors}
+                isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
+              />
+              <DraggableColorPicker
+                colorKey="muted" label="Muted" value={customColors.muted}
+                onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors}
+                isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
+              />
+              <DraggableColorPicker
+                colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
+                onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors}
+                isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
+              />
+              <DraggableColorPicker
+                colorKey="border" label="Border" value={customColors.border}
+                onChange={(v) => setCustomColor("border", v)} onSwap={swapColors}
+                isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
+              />
+            </div>
+
+            {/* Pedestal */}
             {(activeDesign === "dholeish" || activeDesign === "rakery") && (
               <>
-                <DraggableColorPicker
-                  colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
-                  onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors}
-                  isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
-                />
-                <DraggableColorPicker
-                  colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
-                  onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors}
-                  isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
-                />
-                <DraggableColorPicker
-                  colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder}
-                  onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors}
-                  isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
-                />
-                <DraggableColorPicker
-                  colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
-                  onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors}
-                  isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
-                />
-                <DraggableColorPicker
-                  colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow}
-                  onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors}
-                  isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
-                />
+                <div className="w-px h-8 bg-white/20 shrink-0 mx-1" />
+                <div className="flex items-center">
+                <div
+                  className="grid transition-[grid-template-columns] duration-300 ease-in-out"
+                  style={{ gridTemplateColumns: pedestalColorsExpanded ? '1fr' : '0fr' }}
+                >
+                  <div className="overflow-hidden">
+                    <div className="flex items-center gap-3 pr-3 w-max">
+                      <DraggableColorPicker
+                        colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
+                        onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors}
+                        isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
+                      />
+                      <DraggableColorPicker
+                        colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
+                        onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors}
+                        isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
+                      />
+                      <DraggableColorPicker
+                        colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder}
+                        onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors}
+                        isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
+                      />
+                      <DraggableColorPicker
+                        colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
+                        onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors}
+                        isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
+                      />
+                      <DraggableColorPicker
+                        colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow}
+                        onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors}
+                        isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPedestalColorsExpanded(!pedestalColorsExpanded)}
+                  className="flex flex-col items-center gap-0.5 text-[9px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                >
+                  <div className="size-6 rounded-full bg-black/20 border border-white/10 flex items-center justify-center hover:bg-black/40">
+                    <ChevronLeft className={cn("size-3.5 transition-transform duration-300", !pedestalColorsExpanded && "rotate-180")} />
+                  </div>
+                  <span>Pedestal</span>
+                </button>
+              </div>
               </>
             )}
+            </div>
           </div>
 
           {/* Contrast Accessibility Checker */}
-          <div className="flex flex-col gap-2 border-t border-border/20 pt-3.5 w-full px-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Contrast Accessibility (WCAG 2.1)</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full">
-              {[
-                {
-                  label: "Main Body",
-                  bgKey: "background" as keyof CustomColors,
-                  fgKey: "foreground" as keyof CustomColors,
-                },
-                {
-                  label: "Card Content",
-                  bgKey: "card" as keyof CustomColors,
-                  fgKey: "cardForeground" as keyof CustomColors,
-                },
-                {
-                  label: "Accent Button",
-                  bgKey: "primary" as keyof CustomColors,
-                  fgKey: "primaryForeground" as keyof CustomColors,
-                },
-                {
-                  label: "Muted Text",
-                  bgKey: "muted" as keyof CustomColors,
-                  fgKey: "mutedForeground" as keyof CustomColors,
-                },
-              ].map((pair) => {
-                const bg = customColors[pair.bgKey] || "#000000"
-                const fg = customColors[pair.fgKey] || "#ffffff"
-                const info = getContrastInfo(bg, fg)
-                
-                // Color coding for levels
-                let levelBadgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                if (info.level === "AAA") {
-                  levelBadgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                } else if (info.level === "AA") {
-                  levelBadgeClass = "bg-teal-500/10 text-teal-400 border border-teal-500/20"
-                } else if (info.level === "AA Large") {
-                  levelBadgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                }
+          {wcagExpanded && (
+            <div className="flex flex-col gap-2 border-t border-border/20 pt-3.5 mt-2 w-full px-1 animate-in slide-in-from-top-2 fade-in duration-200">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full pt-1">
+                  {[
+                    {
+                      label: "Main Body",
+                      bgKey: "background" as keyof CustomColors,
+                      fgKey: "foreground" as keyof CustomColors,
+                    },
+                    {
+                      label: "Card Content",
+                      bgKey: "card" as keyof CustomColors,
+                      fgKey: "cardForeground" as keyof CustomColors,
+                    },
+                    {
+                      label: "Accent Button",
+                      bgKey: "primary" as keyof CustomColors,
+                      fgKey: "primaryForeground" as keyof CustomColors,
+                    },
+                    {
+                      label: "Muted Text",
+                      bgKey: "muted" as keyof CustomColors,
+                      fgKey: "mutedForeground" as keyof CustomColors,
+                    },
+                  ].map((pair) => {
+                    const bg = customColors[pair.bgKey] || "#000000"
+                    const fg = customColors[pair.fgKey] || "#ffffff"
+                    const info = getContrastInfo(bg, fg)
 
-                // Tooltip text explanations and recommendations
-                let tooltipTitle = ""
-                let tooltipDesc = ""
-                let tooltipAction = ""
+                    // Color coding for levels
+                    let levelBadgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                    if (info.level === "AAA") {
+                      levelBadgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    } else if (info.level === "AA") {
+                      levelBadgeClass = "bg-teal-500/10 text-teal-400 border border-teal-500/20"
+                    } else if (info.level === "AA Large") {
+                      levelBadgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    }
 
-                if (info.level === "AAA") {
-                  tooltipTitle = "AAA - Enhanced Contrast (≥ 7.0:1)"
-                  tooltipDesc = "Excellent readability. Reads perfectly for all text sizes and users."
-                  tooltipAction = "No action needed. Outstanding accessibility!"
-                } else if (info.level === "AA") {
-                  tooltipTitle = "AA - Minimum Contrast (≥ 4.5:1)"
-                  tooltipDesc = "Standard compliant. Good for body text and headings."
-                  tooltipAction = "To meet enhanced AAA standards, increase contrast further."
-                } else if (info.level === "AA Large") {
-                  tooltipTitle = "AA Large - Large Text Only (≥ 3.0:1)"
-                  tooltipDesc = "Readable only for large text (18px+) or bold headers."
-                  tooltipAction = "Action: Make text darker or background lighter to pass for body text."
-                } else {
-                  tooltipTitle = "Fail - Insufficient Contrast (< 3.0:1)"
-                  tooltipDesc = "Hard to read. Does not meet WCAG readability guidelines."
-                  tooltipAction = "Action: Adjust colors to increase contrast ratio to at least 4.5:1."
-                }
+                    // Tooltip text explanations and recommendations
+                    let tooltipTitle = ""
+                    let tooltipDesc = ""
+                    let tooltipAction = ""
 
-                return (
-                  <div 
-                    key={pair.label}
-                    className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/15 p-2"
-                  >
-                    <div 
-                      className="size-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 border border-white/10 select-none shadow-inner"
-                      style={{ backgroundColor: bg, color: fg }}
-                    >
-                      Aa
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] font-medium text-muted-foreground truncate leading-none mb-1">
-                        {pair.label}
-                      </span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-mono font-bold leading-none text-foreground">
-                          {info.ratio.toFixed(1)}:1
-                        </span>
-                        
-                        <div className="relative group/tooltip">
-                          <span className={cn("text-[9px] font-black uppercase px-1 py-0.5 rounded leading-none shrink-0 tracking-wider cursor-help", levelBadgeClass)}>
-                            {info.level}
+                    if (info.level === "AAA") {
+                      tooltipTitle = "AAA - Enhanced Contrast (≥ 7.0:1)"
+                      tooltipDesc = "Excellent readability. Reads perfectly for all text sizes and users."
+                      tooltipAction = "No action needed. Outstanding accessibility!"
+                    } else if (info.level === "AA") {
+                      tooltipTitle = "AA - Minimum Contrast (≥ 4.5:1)"
+                      tooltipDesc = "Standard compliant. Good for body text and headings."
+                      tooltipAction = "To meet enhanced AAA standards, increase contrast further."
+                    } else if (info.level === "AA Large") {
+                      tooltipTitle = "AA Large - Large Text Only (≥ 3.0:1)"
+                      tooltipDesc = "Readable only for large text (18px+) or bold headers."
+                      tooltipAction = "Action: Make text darker or background lighter to pass for body text."
+                    } else {
+                      tooltipTitle = "Fail - Insufficient Contrast (< 3.0:1)"
+                      tooltipDesc = "Hard to read. Does not meet WCAG readability guidelines."
+                      tooltipAction = "Action: Adjust colors to increase contrast ratio to at least 4.5:1."
+                    }
+
+                    return (
+                      <div
+                        key={pair.label}
+                        className="flex items-center gap-2 rounded-lg border border-white/5 bg-black/15 p-2"
+                      >
+                        <div
+                          className="size-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 border border-white/10 select-none shadow-inner"
+                          style={{ backgroundColor: bg, color: fg }}
+                        >
+                          Aa
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] font-medium text-muted-foreground truncate leading-none mb-1">
+                            {pair.label}
                           </span>
-                          
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
-                            <span className="font-bold text-white leading-tight">{tooltipTitle}</span>
-                            <span className="text-zinc-400 leading-normal">{tooltipDesc}</span>
-                            <span className="text-primary font-semibold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-mono font-bold leading-none text-foreground">
+                              {info.ratio.toFixed(1)}:1
+                            </span>
+
+                            <div className="relative group/tooltip">
+                              <span className={cn("text-[9px] font-black uppercase px-1 py-0.5 rounded leading-none shrink-0 tracking-wider cursor-help", levelBadgeClass)}>
+                                {info.level}
+                              </span>
+
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
+                                <span className="font-bold text-white leading-tight">{tooltipTitle}</span>
+                                <span className="text-zinc-400 leading-normal">{tooltipDesc}</span>
+                                <span className="text-primary font-semibold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+                    )
+                  })}
+                </div>
+              </div>
+          )}
         </div>
       )}
 
       {mounted && showExportModal && createPortal(
-        <div 
+        <div
           onPointerDown={(e) => e.stopPropagation()}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] animate-in fade-in duration-200"
         >

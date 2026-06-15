@@ -182,7 +182,7 @@ export function GlobalDesignWidget() {
         isDragging && "transition-none select-none",
         isMinimized 
           ? "rounded-full bg-primary text-primary-foreground p-3.5 cursor-grab active:cursor-grabbing hover:bg-primary/90 hover:scale-105 transition-transform"
-          : "rounded-xl border border-border/20 bg-background/80 backdrop-blur-md p-3 flex items-center gap-3 w-fit max-w-[95vw] cursor-grab active:cursor-grabbing overflow-hidden"
+          : "rounded-xl border border-border/20 bg-background/80 backdrop-blur-md p-3 flex items-center gap-3 w-fit max-w-[95vw] cursor-grab active:cursor-grabbing"
       )}
     >
       {isMinimized ? (
@@ -190,7 +190,7 @@ export function GlobalDesignWidget() {
           <Palette className="size-6 pointer-events-none text-white" />
         </div>
       ) : (
-        <div className="overflow-x-auto overflow-y-hidden no-scrollbar max-w-[90vw] w-fit pr-2 animate-in fade-in zoom-in-95 duration-200">
+        <div className="max-w-[90vw] w-fit pr-2 animate-in fade-in zoom-in-95 duration-200">
           <DesignControls onMinimize={() => setIsMinimized(true)} />
         </div>
       )}
