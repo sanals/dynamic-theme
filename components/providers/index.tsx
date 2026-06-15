@@ -18,6 +18,7 @@ import { LayoutProvider } from "@/components/providers/layout-provider"
 import { DesignProvider } from "@/components/providers/design-provider"
 import { CustomPaletteProvider } from "@/components/providers/custom-palette-provider"
 import { FontProvider } from "@/components/providers/font-provider"
+import { ComparisonProvider } from "@/components/providers/comparison-provider"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -30,7 +31,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <CustomPaletteProvider>
         <DesignProvider>
           <FontProvider>
-            <LayoutProvider>{children}</LayoutProvider>
+            <ComparisonProvider>
+              <LayoutProvider>{children}</LayoutProvider>
+            </ComparisonProvider>
           </FontProvider>
         </DesignProvider>
       </CustomPaletteProvider>

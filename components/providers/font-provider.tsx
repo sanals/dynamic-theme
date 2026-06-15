@@ -22,7 +22,7 @@ const FontContext = createContext<FontContextValue | null>(null)
 
 const STORAGE_KEY = "active-font-pairing"
 
-export function FontProvider({ children }: { children: React.ReactNode }) {
+export function FontProvider({ children, overrideValue }: { children: React.ReactNode; overrideValue?: FontPairingId }) {
   const { activeDesign } = useDesign()
   
   // By default, derive from activeDesign if no explicit user override
@@ -78,6 +78,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
 
   // Apply CSS vars and Google Fonts
   useEffect(() => {
+    if (overrideValue !== undefined) return
     const pairing = fontPairings[activeFont]
     if (!pairing) return
 
@@ -130,10 +131,10 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
         .font-mono { font-family: ${pairing.monoFamily} !important; }
       `
     }
-  }, [activeFont, customFontFamilies])
+  }, [activeFont, customFontFamilies, overrideValue])
 
   return (
-    <FontContext.Provider value={{ activeFont, setFont, customFontFamilies, setCustomFont }}>
+    <FontContext.Provider value={{ activeFont: overrideValue !== undefined ? overrideValue : activeFont, setFont, customFontFamilies, setCustomFont }}>
       {children}
     </FontContext.Provider>
   )

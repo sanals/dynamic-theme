@@ -21,7 +21,7 @@ const DesignContext = createContext<DesignContextValue | null>(null)
 
 const STORAGE_KEY = "active-design-structure"
 
-export function DesignProvider({ children }: { children: React.ReactNode }) {
+export function DesignProvider({ children, overrideValue }: { children: React.ReactNode; overrideValue?: DesignId }) {
   const [activeDesign, setActive] = useState<DesignId>(DEFAULT_DESIGN)
 
   // Hydrate from storage after mount to avoid SSR mismatch.
@@ -38,7 +38,7 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <DesignContext.Provider value={{ activeDesign, setDesign }}>
+    <DesignContext.Provider value={{ activeDesign: overrideValue !== undefined ? overrideValue : activeDesign, setDesign }}>
       {children}
     </DesignContext.Provider>
   )

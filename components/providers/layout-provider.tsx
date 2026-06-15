@@ -29,7 +29,7 @@ const LayoutContext = createContext<LayoutContextValue | null>(null)
 
 const STORAGE_KEY = "active-layout-structure"
 
-export function LayoutProvider({ children }: { children: React.ReactNode }) {
+export function LayoutProvider({ children, overrideValue }: { children: React.ReactNode; overrideValue?: LayoutStructure }) {
   const [activeLayoutStructure, setActive] =
     useState<LayoutStructure>(DEFAULT_LAYOUT)
 
@@ -48,7 +48,7 @@ export function LayoutProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LayoutContext.Provider
-      value={{ activeLayoutStructure, setLayoutStructure }}
+      value={{ activeLayoutStructure: overrideValue !== undefined ? overrideValue : activeLayoutStructure, setLayoutStructure }}
     >
       {children}
     </LayoutContext.Provider>

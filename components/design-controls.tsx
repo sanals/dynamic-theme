@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -21,6 +21,7 @@ import { useCustomPalette, type CustomColors } from "@/components/providers/cust
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
 import { getContrastInfo } from "@/lib/color-utils"
+import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 
 export interface Preset {
   id: string
@@ -277,9 +278,30 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { activeDesign, setDesign } = useDesign()
   const { activeFont, setFont, setCustomFont } = useFont()
   const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors } = useCustomPalette()
+  const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleCaptureSnapshot = () => {
+    const activeThemeName = theme === "custom-palette" ? "Custom" : theme || "Default"
+    const currentSnapshot: Snapshot = {
+      designId: activeDesign,
+      colors: { ...getActiveColors() },
+      layoutStructure: activeLayoutStructure,
+      font: activeFont,
+      themeName: activeThemeName,
+    }
+    setSnapshot(currentSnapshot)
+  }
+
+  const handleToggleComparison = () => {
+    const nextMode = !isComparisonMode
+    setComparisonMode(nextMode)
+    if (nextMode && !snapshot) {
+      handleCaptureSnapshot()
+    }
+  }
 
   const [lastDefaultPalettes, setLastDefaultPalettes] = useState<Record<DesignId, ColorPalette>>({
     rakery: "design-variant-1",
@@ -720,6 +742,28 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 </button>
               )
             })()}
+            <button
+              onClick={handleToggleComparison}
+              title={isComparisonMode ? "Exit comparison mode" : "Enter comparison mode (splits screen to compare designs)"}
+              className={cn(
+                "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
+                isComparisonMode 
+                  ? "bg-primary text-primary-foreground border border-primary shadow-sm" 
+                  : "bg-black/20 hover:bg-black/40 border border-white/10 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Columns className="size-3.5" />
+              <span className="text-[10px] hidden sm:inline">Compare</span>
+            </button>
+            {isComparisonMode && (
+              <button
+                onClick={handleCaptureSnapshot}
+                title="Capture current layout & styles as the comparison snapshot"
+                className="h-6 px-1.5 flex items-center justify-center gap-1.5 rounded bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/35 text-amber-300 transition-colors text-[10px] font-bold cursor-pointer"
+              >
+                Pin Reference
+              </button>
+            )}
             <button
               onClick={handleCopyPalette}
               title="Copy current palette to clipboard"
