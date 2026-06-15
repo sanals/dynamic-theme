@@ -400,6 +400,20 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
 
   const [lockedColors, setLockedColors] = useState<Partial<Record<keyof CustomColors, boolean>>>({})
 
+  const [activeHexColors, setActiveHexColors] = useState<CustomColors>(customColors)
+
+  useEffect(() => {
+    if (theme === "custom-palette") {
+      setActiveHexColors(customColors)
+    } else {
+      const timer = setTimeout(() => {
+        setActiveHexColors(getActiveColors())
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, activeDesign, customColors])
+
   // next-themes only knows the resolved theme on the client.
   useEffect(() => setMounted(true), [])
 
@@ -1320,10 +1334,12 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             )}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Contrast Accessibility Checker */}
-          {wcagExpanded && (
-            <div className="flex flex-col gap-2 border-t border-border/20 pt-3.5 mt-2 w-full px-1 animate-in slide-in-from-top-2 fade-in duration-200">
+      {/* Contrast Accessibility Checker (Available in all modes) */}
+      {mounted && wcagExpanded && (
+        <div className="flex flex-col gap-2 border-t border-border/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 w-full pt-1">
                   {[
                     {
@@ -1347,8 +1363,8 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                       fgKey: "mutedForeground" as keyof CustomColors,
                     },
                   ].map((pair) => {
-                    const bg = customColors[pair.bgKey] || "#000000"
-                    const fg = customColors[pair.fgKey] || "#ffffff"
+                    const bg = activeHexColors[pair.bgKey] || "#000000"
+                    const fg = activeHexColors[pair.fgKey] || "#ffffff"
                     const info = getContrastInfo(bg, fg)
 
                     // Color coding for levels
@@ -1423,8 +1439,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 </div>
               </div>
           )}
-        </div>
-      )}
 
       {mounted && showExportModal && createPortal(
         <div
