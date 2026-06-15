@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useRef } from "react"
 import { useTheme } from "next-themes"
 
 export type CustomColors = {
@@ -47,6 +47,10 @@ interface CustomPaletteContextValue {
   applyBulkColors: (colors: string[]) => void
   resetCustomColors: () => void
   swapColors: (key1: keyof CustomColors, key2: keyof CustomColors) => void
+  undo: () => void
+  redo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
 const CustomPaletteContext = createContext<CustomPaletteContextValue | null>(null)
@@ -57,6 +61,13 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   const { theme } = useTheme()
   const [customColors, setCustomColors] = useState<CustomColors>(DEFAULT_CUSTOM_COLORS)
   const [mounted, setMounted] = useState(false)
+
+  // Undo/Redo stacks
+  const [history, setHistory] = useState<CustomColors[]>([])
+  const [future, setFuture] = useState<CustomColors[]>([])
+
+  const lastEditedKey = useRef<keyof CustomColors | null>(null)
+  const lastPushTime = useRef<number>(0)
 
   // Hydrate custom colors
   useEffect(() => {
@@ -71,7 +82,69 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
     }
   }, [])
 
+  const pushToHistory = (stateToPush: CustomColors) => {
+    setHistory((prev) => {
+      const nextHistory = [...prev, stateToPush]
+      if (nextHistory.length > 50) {
+        return nextHistory.slice(1) // Cap at 50
+      }
+      return nextHistory
+    })
+    setFuture([]) // Clear future stack on new actions
+  }
+
+  const undo = () => {
+    if (history.length === 0) return
+    const prevColors = history[history.length - 1]
+    const currentColors = { ...customColors }
+
+    setFuture((prev) => {
+      const nextFuture = [...prev, currentColors]
+      if (nextFuture.length > 50) {
+        return nextFuture.slice(1)
+      }
+      return nextFuture
+    })
+
+    setHistory((prev) => prev.slice(0, -1))
+    setCustomColors(prevColors)
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prevColors))
+
+    lastEditedKey.current = null
+    lastPushTime.current = 0
+  }
+
+  const redo = () => {
+    if (future.length === 0) return
+    const nextColors = future[future.length - 1]
+    const currentColors = { ...customColors }
+
+    setHistory((prev) => {
+      const nextHistory = [...prev, currentColors]
+      if (nextHistory.length > 50) {
+        return nextHistory.slice(1)
+      }
+      return nextHistory
+    })
+
+    setFuture((prev) => prev.slice(0, -1))
+    setCustomColors(nextColors)
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextColors))
+
+    lastEditedKey.current = null
+    lastPushTime.current = 0
+  }
+
   const setCustomColor = (key: keyof CustomColors, value: string) => {
+    const now = Date.now()
+    const isContinuous = key === lastEditedKey.current && (now - lastPushTime.current < 800)
+
+    if (!isContinuous) {
+      pushToHistory(customColors)
+      lastEditedKey.current = key
+    }
+    lastPushTime.current = now
+
     setCustomColors((prev) => {
       const next = { ...prev, [key]: value }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
@@ -80,6 +153,10 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   }
 
   const applyBulkColors = (colors: string[]) => {
+    pushToHistory(customColors)
+    lastEditedKey.current = null
+    lastPushTime.current = 0
+
     setCustomColors((prev) => {
       const next = { ...prev }
       if (colors[0]) next.background = colors[0]
@@ -105,12 +182,19 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   }
 
   const resetCustomColors = () => {
+    pushToHistory(customColors)
+    lastEditedKey.current = null
+    lastPushTime.current = 0
     setCustomColors(DEFAULT_CUSTOM_COLORS)
     window.localStorage.removeItem(STORAGE_KEY)
   }
 
   const swapColors = (key1: keyof CustomColors, key2: keyof CustomColors) => {
     if (key1 === key2) return
+    pushToHistory(customColors)
+    lastEditedKey.current = null
+    lastPushTime.current = 0
+
     setCustomColors((prev) => {
       const next = { ...prev }
       const temp = next[key1]
@@ -152,7 +236,19 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   `
 
   return (
-    <CustomPaletteContext.Provider value={{ customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors }}>
+    <CustomPaletteContext.Provider
+      value={{
+        customColors,
+        setCustomColor,
+        applyBulkColors,
+        resetCustomColors,
+        swapColors,
+        undo,
+        redo,
+        canUndo: history.length > 0,
+        canRedo: future.length > 0
+      }}
+    >
       {/* Inject styles unconditionally, they are scoped to [data-theme="custom-palette"] anyway */}
       {mounted && theme === "custom-palette" && (
         <style dangerouslySetInnerHTML={{ __html: customCss }} />

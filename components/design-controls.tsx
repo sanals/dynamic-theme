@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns } from "lucide-react"
+import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2 } from "lucide-react"
 import {
   designs,
   palettesByDesign,
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
 import { getContrastInfo } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
+import { toPng } from "html-to-image"
 
 export interface Preset {
   id: string
@@ -255,14 +256,19 @@ function DraggableColorPicker({
         value={safeValue}
         onMouseEnter={() => setIsHoveringInput(true)}
         onMouseLeave={() => setIsHoveringInput(false)}
-        onFocus={() => setIsHoveringInput(true)}
+        onFocus={(e) => {
+          setIsHoveringInput(true)
+          e.target.select()
+        }}
         onBlur={() => setIsHoveringInput(false)}
         onChange={(e) => {
-          const val = e.target.value
-          if (val.length > 0 && !val.startsWith("#")) {
+          let val = e.target.value.trim()
+          // Strip out all hashtags first and prepend exactly one to prevent double hashtags
+          val = val.replace(/#/g, "")
+          if (val.length > 0) {
             onChange("#" + val)
           } else {
-            onChange(val)
+            onChange("")
           }
         }}
         placeholder="#000000"
@@ -277,7 +283,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { activeLayoutStructure, setLayoutStructure } = useLayoutStructure()
   const { activeDesign, setDesign } = useDesign()
   const { activeFont, setFont, setCustomFont } = useFont()
-  const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors } = useCustomPalette()
+  const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors, undo, redo, canUndo, canRedo } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -301,6 +307,67 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     if (nextMode && !snapshot) {
       handleCaptureSnapshot()
     }
+  }
+
+  const [shareCopied, setShareCopied] = useState(false)
+  const [capturingPng, setCapturingPng] = useState(false)
+
+  const handleShareLink = () => {
+    const c = getActiveColors()
+    const colorParams = [
+      c.background, c.foreground, c.card, c.cardForeground,
+      c.primary, c.primaryForeground, c.secondary, c.secondaryForeground,
+      c.muted, c.mutedForeground, c.border,
+      c.pedestalGlow, c.pedestalTop, c.pedestalTopBorder, c.pedestalBody, c.pedestalShadow
+    ].map(color => (color || "").replace("#", "")).join(",")
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?d=${activeDesign}&l=${activeLayoutStructure}&f=${activeFont}&t=${theme}&c=${colorParams}`
+
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    })
+  }
+
+  const handleScreenshot = () => {
+    const el = document.getElementById("design-showcase-container")
+    if (!el) {
+      alert("Could not locate showcase area for capture.")
+      return
+    }
+
+    setCapturingPng(true)
+    toPng(el, {
+      cacheBust: true,
+      skipFonts: true,
+      backgroundColor: getActiveColors().background,
+      style: {
+        transform: 'scale(1)',
+        transformOrigin: 'top left',
+        width: el.offsetWidth + 'px',
+        height: el.offsetHeight + 'px'
+      },
+      styleSheetsFilter: (styleSheet: any) => {
+        try {
+          const rules = styleSheet.cssRules
+          return rules !== undefined
+        } catch (e) {
+          return false
+        }
+      }
+    } as any)
+    .then((dataUrl) => {
+      const link = document.createElement("a")
+      link.download = `design-theme-${activeDesign}-${Date.now()}.png`
+      link.href = dataUrl
+      link.click()
+      setCapturingPng(false)
+    })
+    .catch((err) => {
+      console.error("Screenshot capture failed", err)
+      alert("Failed to capture screenshot. Please try again.")
+      setCapturingPng(false)
+    })
   }
 
   const [lastDefaultPalettes, setLastDefaultPalettes] = useState<Record<DesignId, ColorPalette>>({
@@ -451,6 +518,40 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       }))
     }
   }, [theme, activeDesign])
+
+  // Global keyboard shortcuts for Custom Theme Undo / Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (theme !== "custom-palette") return
+
+      // Ignore if user is typing in an input, textarea, or contenteditable element
+      const activeEl = document.activeElement
+      if (activeEl) {
+        const tag = activeEl.tagName.toUpperCase()
+        const isContentEditable = activeEl.getAttribute("contenteditable") === "true"
+        if (tag === "INPUT" || tag === "TEXTAREA" || isContentEditable) {
+          return
+        }
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key.toLowerCase() === "z") {
+          e.preventDefault()
+          if (e.shiftKey) {
+            redo()
+          } else {
+            undo()
+          }
+        } else if (e.key.toLowerCase() === "y") {
+          e.preventDefault()
+          redo()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [theme, undo, redo])
 
   const handleDesignChange = (newDesignId: DesignId) => {
     setDesign(newDesignId)
@@ -727,6 +828,22 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 >
                   <RotateCcw className="size-3.5" />
                 </button>
+                <button
+                  onClick={undo}
+                  disabled={!canUndo}
+                  title="Undo last change (Ctrl+Z)"
+                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                >
+                  <Undo2 className="size-3.5" />
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={!canRedo}
+                  title="Redo next change (Ctrl+Y)"
+                  className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                >
+                  <Redo2 className="size-3.5" />
+                </button>
               </>
             )}
             {theme !== "custom-palette" && (() => {
@@ -780,6 +897,21 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
             >
               <Download className="size-3.5" />
+            </button>
+            <button
+              onClick={handleShareLink}
+              title="Copy shareable link with current configuration"
+              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              {shareCopied ? <Check className="size-3.5 text-green-500" /> : <Share2 className="size-3.5" />}
+            </button>
+            <button
+              onClick={handleScreenshot}
+              disabled={capturingPng}
+              title={capturingPng ? "Capturing PNG..." : "Download showcase screenshot as PNG"}
+              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50 cursor-pointer"
+            >
+              <Camera className="size-3.5" />
             </button>
             <button
               onClick={onMinimize}

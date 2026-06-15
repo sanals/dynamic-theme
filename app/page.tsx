@@ -11,14 +11,19 @@ import { SynthesisShell } from "@/components/designs/synthesis-shell"
 import { DholeishShell } from "@/components/designs/dholeish-shell"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { type DesignId, type LayoutStructure } from "@/lib/design-config"
-import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
+import { useEffect, useState, useRef } from "react"
 import { Lock } from "lucide-react"
 
 function renderShell(designId: DesignId) {
-  if (designId === "dholeish") return <DholeishShell />
-  if (designId === "synthesis") return <SynthesisShell />
-  if (designId === "h2n") return <H2NShell />
-  return <RakeryShell />
+  return (
+    <div id="design-showcase-container" className="h-full w-full">
+      {designId === "dholeish" && <DholeishShell />}
+      {designId === "synthesis" && <SynthesisShell />}
+      {designId === "h2n" && <H2NShell />}
+      {designId === "rakery" && <RakeryShell />}
+    </div>
+  )
 }
 
 export default function Page() {
@@ -27,11 +32,58 @@ export default function Page() {
   const { activeFont, setFont } = useFont()
   const { customColors, applyBulkColors } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot } = useComparison()
+  const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const hydratedRef = useRef(false)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+
+    if (hydratedRef.current) return
+    hydratedRef.current = true
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const d = params.get("d") // designId
+      const l = params.get("l") // layoutStructure
+      const f = params.get("f") // font
+      const t = params.get("t") // theme
+      const c = params.get("c") // colors
+
+      let didHydrate = false
+
+      if (d) {
+        setDesign(d as DesignId)
+        didHydrate = true
+      }
+      if (l) {
+        setLayoutStructure(l as LayoutStructure)
+        didHydrate = true
+      }
+      if (f) {
+        setFont(f as FontPairingId)
+        didHydrate = true
+      }
+      if (t) {
+        setTheme(t)
+        didHydrate = true
+      }
+      if (c) {
+        const colors = c.split(",").map(val => val.startsWith("#") ? val : "#" + val)
+        if (colors.length >= 11) {
+          applyBulkColors(colors)
+          didHydrate = true
+        }
+      }
+
+      if (didHydrate) {
+        // Clear search parameters from address bar to keep it clean
+        const url = new URL(window.location.href)
+        url.search = ""
+        window.history.replaceState({}, document.title, url.toString())
+      }
+    }
+  }, [setDesign, setLayoutStructure, setFont, setTheme, applyBulkColors])
 
   if (!mounted) {
     return <div className="min-h-screen bg-background" /> // Prevent hydration mismatch flash
