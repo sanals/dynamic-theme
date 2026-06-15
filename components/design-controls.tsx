@@ -323,12 +323,12 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [presetsExpanded, setPresetsExpanded] = useState(false)
   const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)
   const presetsContainerRef = useRef<HTMLDivElement>(null)
-  
+
   // Font Selector
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGeneratingAi, setIsGeneratingAi] = useState(false)
   const fontFileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Image Theme Extractor
   const imageFileInputRef = useRef<HTMLInputElement>(null)
   const [isExtractingImage, setIsExtractingImage] = useState(false)
@@ -618,7 +618,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     setIsExtractingImage(true)
     try {
       const dominantHex = await extractDominantColor(file)
-      
+
       // Temporarily lock the primary color to the extracted hex
       // and generate a palette around it
       const tempColors = { ...customColors, primary: dominantHex }
@@ -627,7 +627,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
         { ...lockedColors, primary: true }, // Force primary to be locked
         activeDesign
       )
-      
+
       // Apply the newly generated palette!
       applyBulkColors([
         newPalette.background,
@@ -951,7 +951,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
         )}
 
         {mounted && (
-          <div className="flex items-center gap-1 ml-1 pl-3 border-l border-border/50 h-7">
+          <div className="flex items-center gap-1 ml-1 pl-3 border-l border-white/20 h-7">
             {/* Edit cluster */}
             <div className="flex items-center gap-1">
               <button
@@ -979,7 +979,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             </div>
 
             {/* Divider */}
-            <div className="w-px h-4 bg-border/30 mx-0.5" />
+            <div className="w-px h-4 bg-white/20 mx-0.5" />
 
             {/* View cluster */}
             <div className="flex items-center gap-1">
@@ -1034,7 +1034,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             </div>
 
             {/* Divider */}
-            <div className="w-px h-4 bg-border/30 mx-0.5" />
+            <div className="w-px h-4 bg-white/20 mx-0.5" />
 
             {/* Share & Copy cluster */}
             <div className="flex items-center gap-1.5">
@@ -1093,7 +1093,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             </div>
 
             {/* Divider */}
-            <div className="w-px h-4 bg-border/30 mx-0.5" />
+            <div className="w-px h-4 bg-white/20 mx-0.5" />
 
             {/* Minimize */}
             <button
@@ -1115,7 +1115,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             <div className="flex items-center justify-center shrink-0">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Presets</span>
             </div>
-            <div className="w-px h-6 bg-border/30 shrink-0 hidden sm:block" />
             <div ref={presetsContainerRef} className="flex gap-2 flex-wrap items-center w-full min-w-0">
               {(presetsExpanded ? presets : presets.slice(0, maxVisiblePresets)).map((preset) => (
                 <div
@@ -1159,8 +1158,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               )}
             </div>
 
-            <div className="w-px h-6 bg-border/30 shrink-0 hidden sm:block ml-auto" />
-            <div className="shrink-0 flex items-center justify-end pl-1 sm:pl-0">
+            <div className="shrink-0 flex items-center justify-end ml-auto pl-1 sm:pl-0">
               {!showSaveInput ? (
                 <button
                   type="button"
@@ -1213,60 +1211,12 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               )}
             </div>
           </div>
-
-          {/* AI Magic Generator */}
-          <div className="px-3 pb-1 flex items-center gap-2 relative z-10 w-full animate-in fade-in">
-            <div className="flex items-center gap-1.5 w-full bg-black/30 border border-purple-500/30 rounded-lg p-1.5 shadow-inner">
-              <Sparkles className="size-3.5 text-purple-400 shrink-0 ml-1" />
-              <input
-                type="text"
-                maxLength={120}
-                placeholder="AI Magic: Describe a theme (e.g. Cyberpunk Neon)..."
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleGenerateAiTheme()
-                }}
-                disabled={isGeneratingAi || isExtractingImage}
-                className="flex-1 min-w-0 bg-transparent border-none text-[10px] text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
-              />
-              <button
-                type="button"
-                onClick={handleGenerateAiTheme}
-                disabled={isGeneratingAi || !aiPrompt.trim() || isExtractingImage}
-                className="h-6 px-3 rounded bg-purple-500/30 text-purple-100 border border-purple-500/50 text-[10px] font-bold hover:bg-purple-500/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
-              >
-                {isGeneratingAi ? <Loader2 className="size-3 animate-spin" /> : "Generate"}
-              </button>
-              
-              <div className="w-px h-4 bg-purple-500/40 mx-0.5" />
-              
-              <button
-                type="button"
-                onClick={() => imageFileInputRef.current?.click()}
-                disabled={isExtractingImage || isGeneratingAi}
-                title="Extract theme from Image"
-                className="h-6 w-6 rounded bg-purple-500/30 text-purple-100 border border-purple-500/50 hover:bg-purple-500/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
-              >
-                {isExtractingImage ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3.5" />}
-              </button>
-              <input
-                type="file"
-                ref={imageFileInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleExtractImage}
-              />
-            </div>
-          </div>
-
           {/* Shape & Format Sliders */}
           <div className="px-3 pb-1 flex flex-wrap items-center gap-6 relative z-10">
 
             {/* Font Selector */}
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Font</label>
-              
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Font</label>
               <div className="relative">
                 <button
                   onClick={() => setFontDropdownOpen(!fontDropdownOpen)}
@@ -1280,8 +1230,8 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   <span className="truncate">
                     {mounted ? (
                       activeFont === "dynamic-google" ? (dynamicGoogleFontName || "Google Font") :
-                      activeFont === "custom" ? (customFontName || "Custom Font") :
-                      fontPairings[activeFont as FontPairingId]?.label || "Font"
+                        activeFont === "custom" ? (customFontName || "Custom Font") :
+                          fontPairings[activeFont as FontPairingId]?.label || "Font"
                     ) : "Font"}
                   </span>
                   <ChevronDown className={cn("size-3 opacity-50 transition-transform duration-200", fontDropdownOpen && "rotate-180")} />
@@ -1371,7 +1321,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                               Apply
                             </button>
                           </div>
-                          
+
                           {/* Autocomplete Suggestions */}
                           {googleFontSearch.trim().length > 0 && (
                             <div className="absolute top-full left-3 right-3 mt-1 max-h-32 overflow-y-auto bg-black/90 border border-white/10 rounded shadow-xl z-50 no-scrollbar">
@@ -1427,8 +1377,10 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               />
             </div>
 
+            <div className="hidden sm:block w-px h-6 bg-white/20 shrink-0" />
+
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-12">Radius</label>
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Radius</label>
               <input
                 type="range"
                 min="0"
@@ -1448,19 +1400,74 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               </button>
             </div>
 
-            {/* Generative & History Controls */}
-            <div className="flex items-center gap-1.5 ml-auto">
-              <button
-                type="button"
-                onClick={handleRandomizePalette}
-                title="Generate random cohesive palette (respects locks)"
-                className="h-6 px-2.5 flex items-center justify-center gap-1.5 rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 hover:border-white/20 transition-colors text-[10px] font-medium"
-              >
-                <Shuffle className="size-3" />
-                <span>Randomize</span>
-              </button>
-              
-              <div className="w-px h-4 bg-border/30 mx-1" />
+            <div className="hidden md:block w-px h-6 bg-white/20 shrink-0" />
+
+            {/* Generate Controls */}
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden xl:block">Generate</label>
+
+              <div className="flex-1 flex items-center gap-1.5 bg-black/30 border border-white/10 rounded-lg p-1 transition-all shadow-inner relative z-10 animate-in fade-in">
+                <Sparkles className="size-3.5 text-purple-400 shrink-0 ml-1" />
+                <input
+                  type="text"
+                  maxLength={120}
+                  placeholder="Describe a theme..."
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleGenerateAiTheme()
+                  }}
+                  disabled={isGeneratingAi || isExtractingImage}
+                  className="flex-1 min-w-0 bg-transparent border-none text-[10px] text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleGenerateAiTheme}
+                  disabled={isGeneratingAi || !aiPrompt.trim() || isExtractingImage}
+                  title={!aiPrompt.trim() ? "Generate with AI (enter text to enable)" : "Generate with AI"}
+                  className="h-6 px-2.5 rounded bg-purple-500/30 text-purple-100 border border-purple-500/50 text-[10px] font-bold hover:bg-purple-500/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                >
+                  {isGeneratingAi ? <Loader2 className="size-3 animate-spin" /> : "AI"}
+                </button>
+
+                <div className="w-px h-4 bg-white/20 mx-0.5" />
+
+                <button
+                  type="button"
+                  onClick={() => imageFileInputRef.current?.click()}
+                  disabled={isExtractingImage || isGeneratingAi}
+                  title="Extract palette from Image"
+                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-black/40 text-muted-foreground border border-white/10 hover:text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {isExtractingImage ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                  {/* <span className="hidden 2xl:inline text-[10px] font-medium">Image</span> */}
+                </button>
+                <input
+                  type="file"
+                  ref={imageFileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleExtractImage}
+                />
+
+                <div className="w-px h-4 bg-white/20 mx-0.5" />
+
+                <button
+                  type="button"
+                  onClick={handleRandomizePalette}
+                  title="Generate random cohesive palette locally"
+                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-black/40 text-muted-foreground border border-white/10 hover:text-foreground hover:bg-white/10 transition-colors text-[10px] font-medium shrink-0"
+                >
+                  <Shuffle className="size-3.5" />
+                  {/* <span className="hidden 2xl:inline">Random</span> */}
+                </button>
+              </div>
+            </div>
+
+            {/* History Controls */}
+            <div className="hidden sm:block w-px h-6 bg-white/20 shrink-0 ml-auto" />
+            <div className="flex items-center gap-1.5">
 
               <button
                 type="button"
@@ -1471,7 +1478,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               >
                 <Undo2 className="size-3" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={redo}
