@@ -201,7 +201,7 @@ function DraggableColorPicker({
 
   return (
     <div
-      draggable={!isHoveringInput}
+      draggable={!isHoveringInput && !isLocked}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", colorKey)
         e.dataTransfer.effectAllowed = "move"
@@ -212,13 +212,17 @@ function DraggableColorPicker({
       }}
       onDrop={(e) => {
         e.preventDefault()
+        if (isLocked) return
         const sourceKey = e.dataTransfer.getData("text/plain") as keyof CustomColors
         if (sourceKey && sourceKey !== colorKey) {
           onSwap(sourceKey, colorKey)
         }
       }}
-      className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-white/5 transition-colors group/item"
-      title="Drag to swap. Click label to copy hex."
+      className={cn(
+        "flex flex-col items-center gap-1 p-1 -m-1 rounded hover:bg-white/5 transition-colors group/item",
+        !isLocked && !isHoveringInput ? "cursor-grab active:cursor-grabbing" : ""
+      )}
+      title={isLocked ? "Color locked. Click label to copy hex." : "Drag to swap. Click label to copy hex."}
     >
       <button
         type="button"
@@ -233,7 +237,11 @@ function DraggableColorPicker({
           type="color"
           value={safeValue.slice(0, 7)}
           onChange={(e) => onChange(e.target.value)}
-          className="size-full cursor-pointer border-0 p-0 rounded-md overflow-hidden pointer-events-auto shrink-0"
+          disabled={isLocked}
+          className={cn(
+            "size-full border-0 p-0 rounded-md overflow-hidden shrink-0",
+            isLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer pointer-events-auto"
+          )}
         />
         {onToggleLock && (
           <button
@@ -254,21 +262,17 @@ function DraggableColorPicker({
       <input
         type="text"
         value={safeValue}
-        onMouseEnter={() => setIsHoveringInput(true)}
-        onMouseLeave={() => setIsHoveringInput(false)}
+        readOnly={isLocked}
+        onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
+        onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
         onFocus={(e) => {
-          setIsHoveringInput(true)
+          if (!isLocked) setIsHoveringInput(true)
           e.target.select()
         }}
         onClick={(e) => e.currentTarget.select()}
         onBlur={() => setIsHoveringInput(false)}
         onPaste={(e) => {
-          const pastedText = e.clipboardData.getData("Text").trim()
-          if (/^#?[0-9a-fA-F]{3,8}$/.test(pastedText)) {
-            e.preventDefault()
-            const val = pastedText.replace(/#/g, "")
-            onChange("#" + val)
-          }
+          e.stopPropagation()
         }}
         onChange={(e) => {
           let val = e.target.value.trim()
@@ -552,6 +556,10 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     ])
   }
 
+  const handleSwapColors = (source: keyof CustomColors, target: keyof CustomColors) => {
+    swapColors(source, target, lockedColors)
+  }
+
   const handleResetColors = () => {
     resetCustomColors()
     setLockedColors({})
@@ -614,7 +622,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     const regex = /#([a-fA-F0-9]{8}|[a-fA-F0-9]{6}|[a-fA-F0-9]{3})\b/g
     const matches = text.match(regex)
     if (matches && matches.length > 0) {
-      applyBulkColors(matches)
+      applyBulkColors(matches, lockedColors)
       if (theme !== "custom-palette") {
         setTheme("custom-palette")
       }
@@ -1202,57 +1210,57 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               <div className="flex items-center gap-3 shrink-0">
               <DraggableColorPicker
                 colorKey="background" label="Bg" value={customColors.background}
-                onChange={(v) => setCustomColor("background", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("background", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
               />
               <DraggableColorPicker
                 colorKey="foreground" label="Text" value={customColors.foreground}
-                onChange={(v) => setCustomColor("foreground", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("foreground", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
               />
               <DraggableColorPicker
                 colorKey="card" label="Card" value={customColors.card}
-                onChange={(v) => setCustomColor("card", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("card", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
               />
               <DraggableColorPicker
                 colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
-                onChange={(v) => setCustomColor("cardForeground", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("cardForeground", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
               />
               <DraggableColorPicker
                 colorKey="primary" label="Accent" value={customColors.primary}
-                onChange={(v) => setCustomColor("primary", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("primary", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
               />
               <DraggableColorPicker
                 colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
-                onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
               />
               <DraggableColorPicker
                 colorKey="secondary" label="Sec" value={customColors.secondary}
-                onChange={(v) => setCustomColor("secondary", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("secondary", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
               />
               <DraggableColorPicker
                 colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
-                onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
               />
               <DraggableColorPicker
                 colorKey="muted" label="Muted" value={customColors.muted}
-                onChange={(v) => setCustomColor("muted", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("muted", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
               />
               <DraggableColorPicker
                 colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
-                onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
               />
               <DraggableColorPicker
                 colorKey="border" label="Border" value={customColors.border}
-                onChange={(v) => setCustomColor("border", v)} onSwap={swapColors}
+                onChange={(v) => setCustomColor("border", v)} onSwap={handleSwapColors}
                 isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
               />
             </div>
@@ -1270,27 +1278,27 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                     <div className="flex items-center gap-3 pr-3 w-max">
                       <DraggableColorPicker
                         colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
-                        onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={swapColors}
+                        onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={handleSwapColors}
                         isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
                       />
                       <DraggableColorPicker
                         colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
-                        onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={swapColors}
+                        onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={handleSwapColors}
                         isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
                       />
                       <DraggableColorPicker
                         colorKey="pedestalTopBorder" label="Ped Border" value={customColors.pedestalTopBorder}
-                        onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={swapColors}
+                        onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={handleSwapColors}
                         isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
                       />
                       <DraggableColorPicker
                         colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
-                        onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={swapColors}
+                        onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={handleSwapColors}
                         isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
                       />
                       <DraggableColorPicker
                         colorKey="pedestalShadow" label="Ped Shad" value={customColors.pedestalShadow}
-                        onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={swapColors}
+                        onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={handleSwapColors}
                         isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
                       />
                     </div>

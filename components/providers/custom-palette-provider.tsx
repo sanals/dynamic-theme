@@ -44,9 +44,9 @@ const DEFAULT_CUSTOM_COLORS: CustomColors = {
 interface CustomPaletteContextValue {
   customColors: CustomColors
   setCustomColor: (key: keyof CustomColors, value: string) => void
-  applyBulkColors: (colors: string[]) => void
+  applyBulkColors: (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
   resetCustomColors: () => void
-  swapColors: (key1: keyof CustomColors, key2: keyof CustomColors) => void
+  swapColors: (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
   undo: () => void
   redo: () => void
   canUndo: boolean
@@ -152,29 +152,29 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
     })
   }
 
-  const applyBulkColors = (colors: string[]) => {
+  const applyBulkColors = (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => {
     pushToHistory(customColors)
     lastEditedKey.current = null
     lastPushTime.current = 0
 
     setCustomColors((prev) => {
       const next = { ...prev }
-      if (colors[0]) next.background = colors[0]
-      if (colors[1]) next.foreground = colors[1]
-      if (colors[2]) next.card = colors[2]
-      if (colors[3]) next.cardForeground = colors[3]
-      if (colors[4]) next.primary = colors[4]
-      if (colors[5]) next.primaryForeground = colors[5]
-      if (colors[6]) next.secondary = colors[6]
-      if (colors[7]) next.secondaryForeground = colors[7]
-      if (colors[8]) next.muted = colors[8]
-      if (colors[9]) next.mutedForeground = colors[9]
-      if (colors[10]) next.border = colors[10]
-      if (colors[11]) next.pedestalGlow = colors[11]
-      if (colors[12]) next.pedestalTop = colors[12]
-      if (colors[13]) next.pedestalTopBorder = colors[13]
-      if (colors[14]) next.pedestalBody = colors[14]
-      if (colors[15]) next.pedestalShadow = colors[15]
+      if (colors[0] && !lockedColors?.background) next.background = colors[0]
+      if (colors[1] && !lockedColors?.foreground) next.foreground = colors[1]
+      if (colors[2] && !lockedColors?.card) next.card = colors[2]
+      if (colors[3] && !lockedColors?.cardForeground) next.cardForeground = colors[3]
+      if (colors[4] && !lockedColors?.primary) next.primary = colors[4]
+      if (colors[5] && !lockedColors?.primaryForeground) next.primaryForeground = colors[5]
+      if (colors[6] && !lockedColors?.secondary) next.secondary = colors[6]
+      if (colors[7] && !lockedColors?.secondaryForeground) next.secondaryForeground = colors[7]
+      if (colors[8] && !lockedColors?.muted) next.muted = colors[8]
+      if (colors[9] && !lockedColors?.mutedForeground) next.mutedForeground = colors[9]
+      if (colors[10] && !lockedColors?.border) next.border = colors[10]
+      if (colors[11] && !lockedColors?.pedestalGlow) next.pedestalGlow = colors[11]
+      if (colors[12] && !lockedColors?.pedestalTop) next.pedestalTop = colors[12]
+      if (colors[13] && !lockedColors?.pedestalTopBorder) next.pedestalTopBorder = colors[13]
+      if (colors[14] && !lockedColors?.pedestalBody) next.pedestalBody = colors[14]
+      if (colors[15] && !lockedColors?.pedestalShadow) next.pedestalShadow = colors[15]
       
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       return next
@@ -189,8 +189,9 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
     window.localStorage.removeItem(STORAGE_KEY)
   }
 
-  const swapColors = (key1: keyof CustomColors, key2: keyof CustomColors) => {
+  const swapColors = (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => {
     if (key1 === key2) return
+    if (lockedColors?.[key1] || lockedColors?.[key2]) return
     pushToHistory(customColors)
     lastEditedKey.current = null
     lastPushTime.current = 0
