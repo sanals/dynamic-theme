@@ -7,14 +7,11 @@ import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moo
 import {
   designs,
   palettesByDesign,
-  layoutStructures,
   darkLightPairs,
   type DesignId,
   type ColorPalette,
-  type LayoutStructure,
 } from "@/lib/design-config"
 import { useDesign } from "@/components/providers/design-provider"
-import { useLayoutStructure } from "@/components/providers/layout-provider"
 import { useFont } from "@/components/providers/font-provider"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
@@ -291,7 +288,7 @@ function DraggableColorPicker({
 
 export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const { theme, setTheme: _setTheme } = useTheme()
-  const { activeLayoutStructure, setLayoutStructure: _setLayoutStructure } = useLayoutStructure()
+
   const { activeDesign, setDesign: _setDesign } = useDesign()
   const { activeFont, setFont, setCustomFont, customFontName, dynamicGoogleFontName, setDynamicGoogleFont } = useFont()
 
@@ -301,10 +298,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     document.startViewTransition(() => flushSync(() => _setTheme(newTheme)))
   }
 
-  const setLayoutStructure = (newLayout: LayoutStructure) => {
-    if (!document.startViewTransition) return _setLayoutStructure(newLayout)
-    document.startViewTransition(() => flushSync(() => _setLayoutStructure(newLayout)))
-  }
 
   const setDesign = (newDesign: DesignId) => {
     if (!document.startViewTransition) return _setDesign(newDesign)
@@ -338,7 +331,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     const currentSnapshot: Snapshot = {
       designId: activeDesign,
       colors: { ...getActiveColors() },
-      layoutStructure: activeLayoutStructure,
+
       font: activeFont,
       themeName: activeThemeName,
     }
@@ -365,7 +358,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       c.pedestalGlow, c.pedestalTop, c.pedestalTopBorder, c.pedestalBody, c.pedestalShadow
     ].map(color => (color || "").replace("#", "")).join(",")
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?d=${activeDesign}&l=${activeLayoutStructure}&f=${activeFont}&t=${theme}&c=${colorParams}`
+    const shareUrl = `${window.location.origin}${window.location.pathname}?d=${activeDesign}&f=${activeFont}&t=${theme}&c=${colorParams}`
 
     navigator.clipboard.writeText(shareUrl).then(() => {
       setShareCopied(true)
@@ -978,15 +971,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             }
           }}
         />
-        {activeDesign === "rakery" && (
-          <Segmented<LayoutStructure>
-            label="Layout"
-            icon={<LayoutGrid className="size-3.5" aria-hidden />}
-            options={layoutStructures}
-            value={activeLayoutStructure}
-            onChange={setLayoutStructure}
-          />
-        )}
 
         {mounted && (
           <div className="flex items-center gap-1 ml-1 pl-3 border-l border-white/20 h-7">
@@ -1005,14 +989,12 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
                 Copy Palette
               </button>
-              {theme === "custom-palette" && (
                 <input
                   type="text"
                   placeholder="Paste palette"
                   onChange={handleBulkPaste}
                   className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
-              )}
               {/* Duplicate history controls removed */}
             </div>
 

@@ -10,10 +10,7 @@
                            "switch to a completely different look" control.
     2. colorPalette     -> maps to the `data-theme` attribute on <html>
                            (handled by next-themes), which swaps CSS vars.
-    3. layoutStructure  -> selects which gallery variant the LayoutController
-                           renders inside the "Rakery" design.
-
-  Adding a new design / palette / layout is a one-line change here plus the
+  Adding a new design / palette is a one-line change here plus the
   corresponding CSS block + components. Nothing else needs to know.
 */
 
@@ -186,30 +183,4 @@ export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
   ],
 }
 
-/* ---------------------------------------------------------------- */
-/* 3. LAYOUT STRUCTURE AXIS (Rakery gallery)                        */
-/* ---------------------------------------------------------------- */
-
-export type LayoutStructure = "card-grid" | "showcase"
-
-export interface LayoutOption {
-  id: LayoutStructure
-  label: string
-  description: string
-}
-
-export const layoutStructures: LayoutOption[] = [
-  {
-    id: "card-grid",
-    label: "Card Grid",
-    description: "Clean, uniform gallery of product cards.",
-  },
-  {
-    id: "showcase",
-    label: "Showcase",
-    description: "Editorial mockup layout with mixed emphasis.",
-  },
-]
-
 export const DEFAULT_PALETTE: ColorPalette = "design-variant-1"
-export const DEFAULT_LAYOUT: LayoutStructure = "card-grid"

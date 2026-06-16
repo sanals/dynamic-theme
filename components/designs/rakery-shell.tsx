@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/site-header"
 import { Hero } from "@/components/hero"
-import { LayoutController } from "@/components/layout-controller"
+import { CardGridLayout } from "@/components/layouts/card-grid-layout"
 
 export function RakeryShell() {
   return (
@@ -8,9 +8,8 @@ export function RakeryShell() {
       <SiteHeader />
       <main className="flex-1">
         <Hero />
-        {/* Structural polymorphism: the controller swaps the entire
-            gallery layout based on the active design state. */}
-        <LayoutController />
+        {/* Structural layout: standard product grid. */}
+        <CardGridLayout />
       </main>
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:px-6 lg:px-8">

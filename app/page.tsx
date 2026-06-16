@@ -1,7 +1,7 @@
 "use client"
 
 import { useDesign, DesignProvider } from "@/components/providers/design-provider"
-import { useLayoutStructure, LayoutProvider } from "@/components/providers/layout-provider"
+
 import { useFont, FontProvider } from "@/components/providers/font-provider"
 import { useCustomPalette } from "@/components/providers/custom-palette-provider"
 import { useComparison } from "@/components/providers/comparison-provider"
@@ -10,7 +10,7 @@ import { H2NShell } from "@/components/designs/h2n-shell"
 import { SynthesisShell } from "@/components/designs/synthesis-shell"
 import { DholeishShell } from "@/components/designs/dholeish-shell"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
-import { type DesignId, type LayoutStructure } from "@/lib/design-config"
+import { type DesignId } from "@/lib/design-config"
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { Lock } from "lucide-react"
@@ -28,7 +28,7 @@ function renderShell(designId: DesignId) {
 
 export default function Page() {
   const { activeDesign, setDesign } = useDesign()
-  const { activeLayoutStructure, setLayoutStructure } = useLayoutStructure()
+
   const { activeFont, setFont } = useFont()
   const { customColors, applyBulkColors } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot } = useComparison()
@@ -45,7 +45,7 @@ export default function Page() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       const d = params.get("d") // designId
-      const l = params.get("l") // layoutStructure
+
       const f = params.get("f") // font
       const t = params.get("t") // theme
       const c = params.get("c") // colors
@@ -56,10 +56,7 @@ export default function Page() {
         setDesign(d as DesignId)
         didHydrate = true
       }
-      if (l) {
-        setLayoutStructure(l as LayoutStructure)
-        didHydrate = true
-      }
+
       if (f) {
         setFont(f as FontPairingId)
         didHydrate = true
@@ -83,7 +80,7 @@ export default function Page() {
         window.history.replaceState({}, document.title, url.toString())
       }
     }
-  }, [setDesign, setLayoutStructure, setFont, setTheme, applyBulkColors])
+  }, [setDesign, setFont, setTheme, applyBulkColors])
 
   if (!mounted) {
     return <div className="min-h-screen bg-background" /> // Prevent hydration mismatch flash
@@ -111,7 +108,7 @@ export default function Page() {
       snapshot.colors.pedestalShadow,
     ])
     setFont(snapshot.font as FontPairingId)
-    setLayoutStructure(snapshot.layoutStructure as LayoutStructure)
+
   }
 
   if (isComparisonMode) {
@@ -209,9 +206,7 @@ export default function Page() {
                 >
                   <DesignProvider overrideValue={snapshot.designId}>
                     <FontProvider overrideValue={snapshot.font as FontPairingId}>
-                      <LayoutProvider overrideValue={snapshot.layoutStructure as LayoutStructure}>
-                        {renderShell(snapshot.designId)}
-                      </LayoutProvider>
+                      {renderShell(snapshot.designId)}
                     </FontProvider>
                   </DesignProvider>
                 </div>

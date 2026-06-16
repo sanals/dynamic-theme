@@ -5,20 +5,15 @@ import { cn } from "@/lib/utils"
 
 interface ProductCardProps {
   product: Product
-  /** Show the print-weight metadata row (used by the showcase layout). */
-  showMeta?: boolean
   className?: string
   imageClassName?: string
 }
 
 /*
-  Shared presentational card. Both layout variants reuse this exact
-  component, only changing the grid that wraps it — keeping product
-  presentation consistent regardless of structure.
+  Shared presentational card.
 */
 export function ProductCard({
   product,
-  showMeta = false,
   className,
   imageClassName,
 }: ProductCardProps) {
@@ -52,18 +47,11 @@ export function ProductCard({
           {product.description}
         </p>
 
-        {showMeta ? (
-          <div className="mt-auto flex items-center justify-between pt-3 text-sm">
-            <span className="text-muted-foreground">{product.weight}g</span>
-            <span className="font-medium text-foreground underline underline-offset-4 decoration-border hover:decoration-foreground transition-colors">View design</span>
-          </div>
-        ) : (
           <div className="mt-auto pt-3">
             <Button size="sm" className="w-full">
               Order Print
             </Button>
           </div>
-        )}
       </div>
     </article>
   )

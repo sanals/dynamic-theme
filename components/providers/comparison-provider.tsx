@@ -7,7 +7,6 @@ import { type CustomColors } from "./custom-palette-provider"
 export interface Snapshot {
   designId: DesignId
   colors: CustomColors
-  layoutStructure: string
   font: string
   themeName: string
 }
