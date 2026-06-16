@@ -1109,7 +1109,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   <button
                     onClick={() => setTheme(isDark ? pair.light : pair.dark)}
                     title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                    className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                    className="h-6 w-6 flex items-center justify-center rounded bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 transition-colors text-muted-foreground hover:text-foreground"
                   >
                     {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
                   </button>
@@ -1122,7 +1122,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
                   isComparisonMode
                     ? "bg-primary text-primary-foreground border border-primary shadow-sm"
-                    : "bg-black/20 hover:bg-black/40 border border-white/10 text-muted-foreground hover:text-foreground"
+                    : "bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 text-muted-foreground hover:text-foreground"
                 )}
               >
                 <Columns className="size-3.5" />
@@ -1132,7 +1132,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 <button
                   onClick={handleCaptureSnapshot}
                   title="Capture current layout & styles as the comparison snapshot"
-                  className="h-6 px-1.5 flex items-center justify-center gap-1.5 rounded bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/35 text-amber-300 transition-colors text-[10px] font-bold cursor-pointer"
+                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-foreground text-background hover:opacity-90 shadow-sm transition-colors text-[10px] font-bold cursor-pointer"
                 >
                   Pin Reference
                 </button>
@@ -1153,7 +1153,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                     "h-6 w-6 flex items-center justify-center rounded border transition-colors cursor-pointer",
                     shareDropdownOpen
                       ? "bg-foreground text-background border-foreground shadow-sm"
-                      : "bg-black/20 hover:bg-black/40 border-white/10 text-muted-foreground hover:text-foreground"
+                      : "bg-foreground/5 hover:bg-foreground/10 border-foreground/10 text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <Share2 className="size-3.5" />
@@ -1205,7 +1205,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             <button
               onClick={onMinimize}
               title="Minimize panel"
-              className="h-6 w-6 flex items-center justify-center rounded bg-black/20 hover:bg-black/40 border border-white/10 transition-colors text-muted-foreground hover:text-foreground"
+              className="h-6 w-6 flex items-center justify-center rounded bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 transition-colors text-muted-foreground hover:text-foreground"
             >
               <Minimize2 className="size-3.5" />
             </button>
@@ -1274,7 +1274,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   + Save Current
                 </button>
               ) : (
-                <div className="flex items-center gap-1.5 bg-black/20 p-1 rounded-lg border border-white/10 shadow-sm animate-in fade-in slide-in-from-right-2 relative">
+                <div className="flex items-center gap-1.5 bg-foreground/5 p-1 rounded-lg border border-foreground/10 shadow-sm animate-in fade-in slide-in-from-right-2 relative">
                   <input
                     type="text"
                     value={newPresetName}
@@ -1462,7 +1462,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 type="button"
                 onClick={() => fontFileInputRef.current?.click()}
                 title="Upload custom font (.ttf, .otf, .woff2)"
-                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                className="h-6 w-6 flex items-center justify-center rounded bg-foreground/5 border border-foreground/10 text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors"
               >
                 <Upload className="size-3" />
               </button>
@@ -1512,7 +1512,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             <div className="flex items-center gap-2 flex-1 min-w-[200px]">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hidden xl:block">Generate</label>
 
-              <div className="flex-1 flex items-center gap-1.5 bg-black/30 border border-white/10 rounded-lg p-1 transition-all shadow-inner relative z-10 animate-in fade-in">
+              <div className="flex-1 flex items-center gap-1.5 bg-foreground/5 border border-foreground/10 rounded-lg p-1 transition-all shadow-inner relative z-10 animate-in fade-in">
                 <Sparkles className="size-3.5 text-purple-400 shrink-0 ml-1" />
                 <input
                   type="text"
@@ -1532,7 +1532,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   onClick={handleGenerateAiTheme}
                   disabled={isGeneratingAi || !aiPrompt.trim() || isExtractingImage}
                   title={!aiPrompt.trim() ? "Generate with AI (enter text to enable)" : "Generate with AI"}
-                  className="h-6 px-2.5 rounded bg-purple-500/30 text-purple-100 border border-purple-500/50 text-[10px] font-bold hover:bg-purple-500/50 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                  className="h-6 px-2.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold hover:bg-purple-500/25 dark:hover:text-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
                 >
                   {isGeneratingAi ? <Loader2 className="size-3 animate-spin" /> : "AI"}
                 </button>
@@ -1544,7 +1544,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   onClick={() => imageFileInputRef.current?.click()}
                   disabled={isExtractingImage || isGeneratingAi}
                   title={Object.values(lockedColors).some(Boolean) ? "Extract palette from Image (Locked colors may cause the extracted color to apply to secondary sections)" : "Extract palette from Image"}
-                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-black/40 text-muted-foreground border border-white/10 hover:text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-foreground/5 text-muted-foreground border border-foreground/10 hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   {isExtractingImage ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3.5" />}
                   {/* <span className="hidden 2xl:inline text-[10px] font-medium">Image</span> */}
@@ -1563,7 +1563,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   type="button"
                   onClick={handleRandomizePalette}
                   title="Generate random cohesive palette locally"
-                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-black/40 text-muted-foreground border border-white/10 hover:text-foreground hover:bg-white/10 transition-colors text-[10px] font-medium shrink-0"
+                  className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-foreground/5 text-muted-foreground border border-foreground/10 hover:text-foreground hover:bg-foreground/10 transition-colors text-[10px] font-medium shrink-0"
                 >
                   <Shuffle className="size-3.5" />
                   {/* <span className="hidden 2xl:inline">Random</span> */}
@@ -1580,7 +1580,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 onClick={undo}
                 disabled={!canUndo}
                 title="Undo last change (Ctrl+Z)"
-                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="h-6 w-6 flex items-center justify-center rounded bg-foreground/5 border border-foreground/10 text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Undo2 className="size-3" />
               </button>
@@ -1590,7 +1590,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 onClick={redo}
                 disabled={!canRedo}
                 title="Redo next change (Ctrl+Y)"
-                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="h-6 w-6 flex items-center justify-center rounded bg-foreground/5 border border-foreground/10 text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Redo2 className="size-3" />
               </button>
@@ -1599,7 +1599,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 type="button"
                 onClick={handleResetColors}
                 title="Reset to default palette"
-                className="h-6 w-6 flex items-center justify-center rounded bg-black/30 border border-white/10 text-red-400/70 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors ml-1"
+                className="h-6 w-6 flex items-center justify-center rounded bg-foreground/5 border border-foreground/10 text-red-600/70 dark:text-red-400/70 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors ml-1"
               >
                 <RotateCcw className="size-3" />
               </button>
@@ -1714,7 +1714,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                       onClick={() => setPedestalColorsExpanded(!pedestalColorsExpanded)}
                       className="flex flex-col items-center gap-0.5 text-[9px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
                     >
-                      <div className="size-6 rounded-full bg-black/20 border border-white/10 flex items-center justify-center hover:bg-black/40">
+                      <div className="size-6 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center hover:bg-foreground/10">
                         <ChevronLeft className={cn("size-3.5 transition-transform duration-300", !pedestalColorsExpanded && "rotate-180")} />
                       </div>
                       <span>Pedestal</span>
