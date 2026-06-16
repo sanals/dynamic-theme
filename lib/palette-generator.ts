@@ -243,8 +243,7 @@ export function generatePalette(
     : hslToHex(getHsl(secondaryHue, Math.max(15, seedHsl.s - 20), 90))
   generated.secondaryForeground = isDark ? "#ffffff" : "#09090b"
 
-  // 4. Pedestal options for dholeish / rakery
-  if (activeDesign === "dholeish" || activeDesign === "rakery") {
+  if (activeDesign === "gallery" || activeDesign === "storefront") {
     // Pedestal Glow matches accent color
     generated.pedestalGlow = hslToHex(getHsl(primaryHue, seedHsl.s, 50, 0.4))
     

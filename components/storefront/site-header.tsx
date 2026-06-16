@@ -1,6 +1,6 @@
 const navLinks = ["Catalog", "Designs", "Filaments", "Materials", "Pricing"]
 
-export function StorefrontHeader({ brandName = "Rakery" }: { brandName?: string }) {
+export function StorefrontHeader({ brandName = "Aura" }: { brandName?: string }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">

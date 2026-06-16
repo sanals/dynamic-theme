@@ -116,8 +116,8 @@ export interface PaletteOption {
 
 /**
  * Every palette registered with next-themes. The steel-blue palette is
- * owned by the H2N design and is applied automatically, so it is not part
- * of Rakery's user-facing palette toggle below.
+ * owned by the catalog design and is applied automatically, so it is not part
+ * of the storefront design's user-facing palette toggle below.
  */
 export const allPaletteIds: ColorPalette[] = [
   "design-variant-1",

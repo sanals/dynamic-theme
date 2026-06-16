@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Rakery — Luxury 3D Prints',
+  title: 'Aura — Luxury 3D Prints',
   description:
     'A theme-switchable gallery of high-fidelity 3D prints. Toggle color palettes and layout structures on the fly.',
   generator: 'v0.app',
