@@ -3,10 +3,9 @@
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
-import { Frame, Palette, LayoutGrid, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Type, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronRight, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 } from "lucide-react"
+import { Frame, Palette, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 } from "lucide-react"
 import {
   designs,
-  palettesByDesign,
   darkLightPairs,
   type DesignId,
   type ColorPalette,
@@ -461,7 +460,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     })
   }
 
-  const [extendedColorsExpanded, setExtendedColorsExpanded] = useState(false)
+
   const [pedestalColorsExpanded, setPedestalColorsExpanded] = useState(false)
   const [presetsExpanded, setPresetsExpanded] = useState(false)
   const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)

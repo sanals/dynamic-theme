@@ -7,7 +7,7 @@ export function StorefrontShell({ brandName }: { brandName: string }) {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <StorefrontHeader brandName={brandName} />
       <main className="flex-1">
-        <StorefrontHero brandName={brandName} />
+        <StorefrontHero />
         {/* Structural layout: standard product grid. */}
         <CardGridLayout />
       </main>

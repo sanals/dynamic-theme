@@ -1,11 +1,11 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { 
   LayoutDashboard, Users, Activity, Settings, 
   Search, Bell, ChevronDown, MoreHorizontal,
-  ArrowUpRight, ArrowDownRight, DollarSign,
-  CreditCard, BarChart3, Wallet, Download,
-  CheckCircle2, Clock, GitCommit, Play, Plus,
-  ListFilter, MoreVertical, Paperclip, MessageSquare
+  ArrowUpRight, ArrowDownRight,
+  BarChart3, Wallet, Download,
+  CheckCircle2, GitCommit, Plus,
+  ListFilter, MoreVertical, MessageSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 

@@ -36,10 +36,10 @@ function renderShell(designId: DesignId) {
 export default function Page() {
   const { activeDesign, setDesign } = useDesign()
 
-  const { activeFont, setFont } = useFont()
-  const { customColors, applyBulkColors } = useCustomPalette()
+  const { setFont } = useFont()
+  const { applyBulkColors } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot } = useComparison()
-  const { theme, setTheme } = useTheme()
+  const { setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const hydratedRef = useRef(false)
 

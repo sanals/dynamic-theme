@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { DesignControls } from "@/components/design-controls"
-import { GripHorizontal, Minimize2, Palette } from "lucide-react"
+import { Palette } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const STORAGE_KEY = "global-widget-state"

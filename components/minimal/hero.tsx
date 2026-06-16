@@ -1,7 +1,7 @@
 import { heroContent } from "@/lib/products"
 import { ChevronRight } from "lucide-react"
 
-export function MinimalHero({ brandName }: { brandName?: string }) {
+export function MinimalHero() {
   return (
     <section className="w-full max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center">
       <div className="relative w-full aspect-square max-h-[600px] flex justify-center items-center rounded-3xl bg-card border border-border/50 shadow-2xl shadow-foreground/5 overflow-hidden">

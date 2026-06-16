@@ -13,7 +13,7 @@ export function GalleryShell({ brandName }: { brandName: string }) {
       <GalleryHeader brandName={brandName} />
       
       <main className="flex-1 flex flex-col items-center">
-        <GalleryProductGrid brandName={brandName} />
+        <GalleryProductGrid />
       </main>
 
       {/* Footer / Bottom decorative star */}

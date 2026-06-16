@@ -1,10 +1,10 @@
 import React, { useState, useRef } from "react"
 import { 
-  Search, Bell, Check, ChevronRight, AlertCircle, 
-  CheckCircle2, Mail, Lock, Loader2, GripVertical, 
+  Search, Check, ChevronRight, AlertCircle, 
+  Mail, Lock, Loader2, GripVertical, 
   Upload, User, Settings, Home, CreditCard,
-  Plus, MoreHorizontal, ChevronDown, ChevronLeft, ChevronUp,
-  XCircle, Info, AlignLeft, AlignCenter, AlignRight
+  Plus, ChevronLeft,
+  XCircle, AlignLeft, AlignCenter, AlignRight
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 

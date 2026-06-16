@@ -2,7 +2,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { heroContent } from "@/lib/products"
 
-export function StorefrontHero({ brandName }: { brandName?: string }) {
+export function StorefrontHero() {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:py-24">

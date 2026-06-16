@@ -152,27 +152,21 @@ export function generatePalette(
   // Calculate harmonized hues based on seed hue
   let primaryHue = seedHsl.h
   let secondaryHue = (seedHsl.h + 30) % 360
-  let accentHue = seedHsl.h
 
   switch (harmony) {
     case "complementary":
-      accentHue = (seedHsl.h + 180) % 360
       secondaryHue = (seedHsl.h + 180) % 360
       break
     case "triadic":
-      accentHue = (seedHsl.h + 120) % 360
       secondaryHue = (seedHsl.h + 240) % 360
       break
     case "analogous":
-      accentHue = (seedHsl.h + 30) % 360
       secondaryHue = (seedHsl.h - 30 + 360) % 360
       break
     case "split":
-      accentHue = (seedHsl.h + 150) % 360
       secondaryHue = (seedHsl.h + 210) % 360
       break
     case "monochromatic":
-      accentHue = seedHsl.h
       secondaryHue = seedHsl.h
       break
   }
