@@ -55,7 +55,7 @@ export function ProductCard({
         {showMeta ? (
           <div className="mt-auto flex items-center justify-between pt-3 text-sm">
             <span className="text-muted-foreground">{product.weight}g</span>
-            <span className="font-medium text-primary">View design</span>
+            <span className="font-medium text-foreground underline underline-offset-4 decoration-border hover:decoration-foreground transition-colors">View design</span>
           </div>
         ) : (
           <div className="mt-auto pt-3">

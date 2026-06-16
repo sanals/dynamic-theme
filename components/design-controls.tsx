@@ -1084,7 +1084,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   className={cn(
                     "h-6 w-6 flex items-center justify-center rounded border transition-colors cursor-pointer",
                     shareDropdownOpen
-                      ? "bg-primary/20 border-primary/40 text-primary"
+                      ? "bg-foreground text-background border-foreground shadow-sm"
                       : "bg-black/20 hover:bg-black/40 border-white/10 text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -1286,7 +1286,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                           className={cn(
                             "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
                             activeFont === fp.id
-                              ? "bg-primary/15 text-primary"
+                              ? "bg-foreground/15 text-foreground font-bold"
                               : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                           )}
                         >
@@ -1302,7 +1302,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                           className={cn(
                             "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
                             activeFont === "dynamic-google"
-                              ? "bg-primary/15 text-primary"
+                              ? "bg-foreground/15 text-foreground font-bold"
                               : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                           )}
                         >
@@ -1319,7 +1319,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                           className={cn(
                             "w-full text-left px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-2",
                             activeFont === "custom"
-                              ? "bg-primary/15 text-primary"
+                              ? "bg-foreground/15 text-foreground font-bold"
                               : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                           )}
                         >
@@ -1769,7 +1769,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
                           <span className="font-bold text-white leading-tight">{tooltipTitle}</span>
                           <span className="text-zinc-400 leading-normal">{tooltipDesc}</span>
-                          <span className="text-primary font-semibold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
+                          <span className="text-white font-bold leading-normal border-t border-white/5 pt-1 mt-0.5">{tooltipAction}</span>
                         </div>
                       </div>
                     </div>
@@ -1789,7 +1789,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
           <div className="bg-background/95 border border-white/10 rounded-2xl p-5 w-full max-w-lg mx-4 flex flex-col gap-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-foreground">
             <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
               <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Download className="size-4 text-primary" />
+                <Download className="size-4 text-foreground/80" />
                 Export Theme Configuration
               </span>
               <button

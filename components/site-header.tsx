@@ -7,8 +7,9 @@ export function SiteHeader() {
         <div className="flex items-center gap-8">
           <a
             href="#"
-            className="font-heading text-xl font-bold tracking-tight text-primary"
+            className="font-heading text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
           >
+            <span className="size-4 rounded bg-primary" aria-hidden />
             Rakery
           </a>
           <nav aria-label="Primary" className="hidden lg:block">
@@ -19,7 +20,7 @@ export function SiteHeader() {
                     href="#"
                     className={
                       i === 0
-                        ? "text-sm font-medium text-primary"
+                        ? "text-sm font-semibold text-foreground"
                         : "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                     }
                   >
