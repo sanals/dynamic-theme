@@ -1,7 +1,7 @@
-import { DholeishHeader } from "@/components/dholeish/site-header"
-import { DholeishProductGrid } from "@/components/dholeish/product-grid"
+import { GalleryHeader } from "@/components/gallery/site-header"
+import { GalleryProductGrid } from "@/components/gallery/product-grid"
 
-export function DholeishShell() {
+export function GalleryShell({ brandName }: { brandName: string }) {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground font-sans antialiased selection:bg-primary selection:text-primary-foreground pb-24">
       
@@ -10,10 +10,10 @@ export function DholeishShell() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[500px] bg-primary/10 blur-[120px] rounded-full" />
       </div>
 
-      <DholeishHeader />
+      <GalleryHeader brandName={brandName} />
       
       <main className="flex-1 flex flex-col items-center">
-        <DholeishProductGrid />
+        <GalleryProductGrid brandName={brandName} />
       </main>
 
       {/* Footer / Bottom decorative star */}

@@ -470,10 +470,10 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   }
 
   const [lastDefaultPalettes, setLastDefaultPalettes] = useState<Record<DesignId, ColorPalette>>({
-    rakery: "design-variant-1",
-    h2n: "design-variant-3",
-    synthesis: "design-variant-5",
-    dholeish: "design-variant-7",
+    storefront: "design-variant-1",
+    catalog: "design-variant-3",
+    minimal: "design-variant-5",
+    gallery: "design-variant-7",
     saas: "design-variant-9",
     uikit: "design-variant-11",
   })
@@ -982,7 +982,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       c.border,
     ].join(", ")
 
-    if (activeDesign === "dholeish" || activeDesign === "rakery") {
+    if (activeDesign === "gallery" || activeDesign === "storefront") {
       paletteString += `, ${c.pedestalGlow}, ${c.pedestalTop}, ${c.pedestalTopBorder}, ${c.pedestalBody}, ${c.pedestalShadow}`
     }
 
@@ -1691,7 +1691,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
               </div>
 
               {/* Pedestal */}
-              {(activeDesign === "dholeish" || activeDesign === "rakery") && (
+              {(activeDesign === "gallery" || activeDesign === "storefront") && (
                 <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar px-2 pb-2">
                   <div className="hidden 2xl:block w-px h-8 bg-white/20 shrink-0 mx-1" />
                   <div className="flex items-center">
@@ -2001,3 +2001,5 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     </div>
   )
 }
+
+

@@ -1,6 +1,6 @@
 import { products } from "@/lib/products"
-import { ProductCard } from "@/components/product-card"
-import { SectionHeading } from "@/components/section-heading"
+import { ProductCard } from "@/components/storefront/product-card"
+import { SectionHeading } from "@/components/storefront/section-heading"
 
 /*
   LAYOUT VARIANT: "card-grid"

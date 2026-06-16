@@ -5,25 +5,28 @@ import { useDesign, DesignProvider } from "@/components/providers/design-provide
 import { useFont, FontProvider } from "@/components/providers/font-provider"
 import { useCustomPalette } from "@/components/providers/custom-palette-provider"
 import { useComparison } from "@/components/providers/comparison-provider"
-import { RakeryShell } from "@/components/designs/rakery-shell"
-import { H2NShell } from "@/components/designs/h2n-shell"
-import { SynthesisShell } from "@/components/designs/synthesis-shell"
-import { DholeishShell } from "@/components/designs/dholeish-shell"
+import { StorefrontShell } from "@/components/designs/storefront-shell"
+import { CatalogShell } from "@/components/designs/catalog-shell"
+import { MinimalShell } from "@/components/designs/minimal-shell"
+import { GalleryShell } from "@/components/designs/gallery-shell"
 import { UiKitShell } from "@/components/designs/uikit-shell"
 import { SaasShell } from "@/components/designs/saas-shell"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
-import { type DesignId } from "@/lib/design-config"
+import { type DesignId, designs } from "@/lib/design-config"
 import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { Lock } from "lucide-react"
 
 function renderShell(designId: DesignId) {
+  const activeDesignObj = designs.find(d => d.id === designId)
+  const brandName = activeDesignObj?.label || "BRAND"
+
   return (
     <div id="design-showcase-container" className="h-full w-full">
-      {designId === "dholeish" && <DholeishShell />}
-      {designId === "synthesis" && <SynthesisShell />}
-      {designId === "h2n" && <H2NShell />}
-      {designId === "rakery" && <RakeryShell />}
+      {designId === "gallery" && <GalleryShell brandName={brandName} />}
+      {designId === "minimal" && <MinimalShell brandName={brandName} />}
+      {designId === "catalog" && <CatalogShell brandName={brandName} />}
+      {designId === "storefront" && <StorefrontShell brandName={brandName} />}
       {designId === "uikit" && <UiKitShell />}
       {designId === "saas" && <SaasShell />}
     </div>

@@ -27,8 +27,27 @@ export function DesignProvider({ children, overrideValue }: { children: React.Re
   // Hydrate from storage after mount to avoid SSR mismatch.
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored === "rakery" || stored === "h2n" || stored === "synthesis" || stored === "dholeish" || stored === "saas" || stored === "uikit") {
-      setActive(stored as DesignId)
+    
+    // Migration map for old keys
+    const migrationMap: Record<string, DesignId> = {
+      rakery: "storefront",
+      aura: "storefront",
+      h2n: "catalog",
+      forge: "catalog",
+      synthesis: "minimal",
+      nova: "minimal",
+      dholeish: "gallery",
+      verdant: "gallery",
+    }
+
+    if (stored) {
+      if (migrationMap[stored]) {
+        setActive(migrationMap[stored])
+        // Update local storage to new key
+        window.localStorage.setItem(STORAGE_KEY, migrationMap[stored])
+      } else if (stored === "storefront" || stored === "catalog" || stored === "minimal" || stored === "gallery" || stored === "saas" || stored === "uikit") {
+        setActive(stored as DesignId)
+      }
     }
   }, [])
 

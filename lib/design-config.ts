@@ -20,7 +20,7 @@
 
 import { FontPairingId } from "./font-config"
 
-export type DesignId = "rakery" | "h2n" | "synthesis" | "dholeish" | "saas" | "uikit"
+export type DesignId = "storefront" | "catalog" | "minimal" | "gallery" | "saas" | "uikit"
 
 export interface DesignOption {
   id: DesignId
@@ -34,29 +34,29 @@ export interface DesignOption {
 
 export const designs: DesignOption[] = [
   {
-    id: "rakery",
-    label: "Rakery",
+    id: "storefront",
+    label: "Aura",
     description: "Warm luxe storefront with an orange accent.",
     defaultPalette: "design-variant-1",
     defaultFont: "inter",
   },
   {
-    id: "h2n",
-    label: "H2N",
+    id: "catalog",
+    label: "Forge",
     description: "Industrial steel-blue catalog with condensed type.",
     defaultPalette: "design-variant-3",
     defaultFont: "roboto-mono",
   },
   {
-    id: "synthesis",
-    label: "Synthesis",
+    id: "minimal",
+    label: "Nova",
     description: "Futuristic bionic minimal catalog with ultra-clean elements.",
     defaultPalette: "design-variant-5",
     defaultFont: "geist",
   },
   {
-    id: "dholeish",
-    label: "Dholeish",
+    id: "gallery",
+    label: "Verdant",
     description: "Forest green glassmorphic aesthetic with pedestals.",
     defaultPalette: "design-variant-7",
     defaultFont: "playfair",
@@ -77,14 +77,14 @@ export const designs: DesignOption[] = [
   },
 ]
 
-export const DEFAULT_DESIGN: DesignId = "rakery"
+export const DEFAULT_DESIGN: DesignId = "storefront"
 
 /** Maps each design to its dark and light palette variants for the quick toggle. */
 export const darkLightPairs: Record<DesignId, { dark: ColorPalette; light: ColorPalette }> = {
-  rakery: { dark: "design-variant-1", light: "design-variant-2" },
-  h2n: { dark: "design-variant-3", light: "design-variant-4" },
-  synthesis: { dark: "design-variant-6", light: "design-variant-5" },
-  dholeish: { dark: "design-variant-7", light: "design-variant-8" },
+  storefront: { dark: "design-variant-1", light: "design-variant-2" },
+  catalog: { dark: "design-variant-3", light: "design-variant-4" },
+  minimal: { dark: "design-variant-6", light: "design-variant-5" },
+  gallery: { dark: "design-variant-7", light: "design-variant-8" },
   saas: { dark: "design-variant-9", light: "design-variant-10" },
   uikit: { dark: "design-variant-11", light: "design-variant-12" },
 }
@@ -137,7 +137,7 @@ export const allPaletteIds: ColorPalette[] = [
 
 /** The palettes mapped by design ID. */
 export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
-  rakery: [
+  storefront: [
     {
       id: "design-variant-1",
       label: "Luxe Dark",
@@ -154,7 +154,7 @@ export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
       description: "User defined palette.",
     },
   ],
-  h2n: [
+  catalog: [
     {
       id: "design-variant-3",
       label: "Industrial Dark",
@@ -171,7 +171,7 @@ export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
       description: "User defined palette.",
     },
   ],
-  synthesis: [
+  minimal: [
     {
       id: "design-variant-5",
       label: "Bionic Light",
@@ -188,7 +188,7 @@ export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
       description: "User defined palette.",
     },
   ],
-  dholeish: [
+  gallery: [
     {
       id: "design-variant-7",
       label: "Forest",
@@ -242,3 +242,4 @@ export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
 }
 
 export const DEFAULT_PALETTE: ColorPalette = "design-variant-1"
+

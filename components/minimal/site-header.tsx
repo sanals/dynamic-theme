@@ -1,6 +1,6 @@
 import { Menu, User } from "lucide-react"
 
-export function SynthesisHeader() {
+export function MinimalHeader() {
   return (
     <header className="w-full bg-transparent pt-8 pb-4">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6">

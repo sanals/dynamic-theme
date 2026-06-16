@@ -1,12 +1,12 @@
 import { Search, ShoppingBag } from "lucide-react"
 
-export function H2NHeader() {
+export function CatalogHeader() {
   return (
     <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur border-b border-border/10">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between px-6">
         <div className="flex items-center gap-6">
           {/* Logo */}
-          <span className="text-2xl font-bold tracking-widest">H2N</span>
+          <span className="text-2xl font-bold tracking-widest">FORGE</span>
         </div>
         
         <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-widest text-muted-foreground">

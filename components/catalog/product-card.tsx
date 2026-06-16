@@ -1,7 +1,7 @@
 import { ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export interface H2NProductCardProps {
+export interface CatalogProductCardProps {
   title: string
   price: string
   colors: { name: string; hex: string }[]
@@ -10,14 +10,14 @@ export interface H2NProductCardProps {
   className?: string
 }
 
-export function H2NProductCard({
+export function CatalogProductCard({
   title,
   price,
   colors,
   imageUrl,
   featured = false,
   className,
-}: H2NProductCardProps) {
+}: CatalogProductCardProps) {
   return (
     <div className={cn("group flex flex-col relative", className)}>
       <div className={cn(

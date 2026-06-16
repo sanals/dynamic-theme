@@ -1,7 +1,7 @@
-import { H2NProductCard } from "./product-card"
+import { CatalogProductCard } from "./product-card"
 import { products } from "@/lib/products"
 
-export function H2NProductGrid() {
+export function CatalogProductGrid() {
   return (
     <div className="w-full bg-background pb-24 border-t-4 border-background pt-16">
       <div className="mx-auto max-w-[1400px] px-6">
@@ -34,7 +34,7 @@ export function H2NProductGrid() {
           
           {/* Large Featured Card (Spans 2 columns) */}
           <div className="lg:col-span-2">
-            <H2NProductCard 
+            <CatalogProductCard 
               title={products[4].name}
               price="$39.99"
               colors={[]}
@@ -46,7 +46,7 @@ export function H2NProductGrid() {
 
           {/* Standard Cards */}
           {products.filter((_, i) => i !== 4).map((product, i) => (
-            <H2NProductCard 
+            <CatalogProductCard 
               key={product.id}
               title={product.name}
               price={`$${(20 + i * 5).toFixed(2)}`} // Fake price since products don't have price field

@@ -27,6 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       defaultTheme={DEFAULT_PALETTE}
       enableSystem={false}
       themes={allPaletteIds}
+      disableTransitionOnChange
     >
       <CustomPaletteProvider>
         <DesignProvider>

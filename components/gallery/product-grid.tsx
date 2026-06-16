@@ -1,7 +1,7 @@
 import { products } from "@/lib/products"
-import { DholeishProductCard } from "./product-card"
+import { GalleryProductCard } from "./product-card"
 
-export function DholeishProductGrid() {
+export function GalleryProductGrid() {
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-12">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -12,7 +12,7 @@ export function DholeishProductGrid() {
           const prefix = product.name.split(" ")[0]
 
           return (
-            <DholeishProductCard 
+            <GalleryProductCard 
               key={product.id}
               title={product.name}
               subtitle={prefix}

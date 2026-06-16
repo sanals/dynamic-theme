@@ -1,7 +1,7 @@
 import { ArrowUpRight } from "lucide-react"
 import { products, heroContent } from "@/lib/products"
 
-export function H2NHero() {
+export function CatalogHero() {
   return (
     <div className="relative w-full overflow-hidden bg-background pt-12 pb-24 border-b border-border/10">
       <div className="mx-auto max-w-[1400px] px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
@@ -48,8 +48,8 @@ export function H2NHero() {
         {/* Center Column: Main Hero Image */}
         <div className="lg:col-span-6 relative flex justify-center items-center">
           {/* Faux background text */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[20rem] font-black text-foreground/5 pointer-events-none select-none -z-10 tracking-tighter">
-            H2N
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[15rem] md:text-[20rem] font-black text-foreground/5 pointer-events-none select-none -z-10 tracking-tighter">
+            FORGE
           </div>
           {/* Main Hero image */}
           <img 

@@ -1,13 +1,13 @@
 import { Target } from "lucide-react"
 
-interface DholeishProductCardProps {
+interface GalleryProductCardProps {
   title: string
   subtitle: string
   subtext: string
   imageUrl: string
 }
 
-export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: DholeishProductCardProps) {
+export function GalleryProductCard({ title, subtitle, subtext, imageUrl }: GalleryProductCardProps) {
   return (
     <div className="group relative bg-card/90 rounded-3xl p-3 shadow-2xl overflow-hidden flex flex-col h-[400px] border border-border/50 backdrop-blur-md transition-all hover:-translate-y-1">
 

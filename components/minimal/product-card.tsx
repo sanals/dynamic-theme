@@ -1,13 +1,13 @@
 import { ChevronLeft } from "lucide-react"
 
-interface SynthesisProductCardProps {
+interface MinimalProductCardProps {
   title: string
   price: string
   imageUrl: string
   featured?: boolean
 }
 
-export function SynthesisProductCard({ title, price, imageUrl, featured }: SynthesisProductCardProps) {
+export function MinimalProductCard({ title, price, imageUrl, featured }: MinimalProductCardProps) {
   // Use a shortened title for the large background text
   const bgText = title.split(' ')[0].toUpperCase()
 
@@ -63,7 +63,7 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
             <svg viewBox="0 0 24 24" className="w-8 h-8 fill-foreground mb-1">
               <path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z" />
             </svg>
-            <span className="text-[10px] font-bold tracking-widest uppercase">SYNTTEKIS</span>
+            <span className="text-[10px] font-bold tracking-widest uppercase">NOVA</span>
           </div>
           <span className="text-2xl sm:text-3xl font-black tracking-tighter">{price}</span>
         </div>
