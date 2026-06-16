@@ -19,7 +19,7 @@ export function SynthesisProductCard({ title, price, imageUrl, featured }: Synth
       : "h-[190px] sm:h-[230px]"
 
   return (
-    <div className="group relative bg-card rounded-3xl shadow-xl shadow-foreground/5 overflow-hidden flex flex-col transition-transform hover:-translate-y-1">
+    <div className="group relative bg-card border border-border/50 rounded-3xl shadow-xl shadow-foreground/5 overflow-hidden flex flex-col transition-transform hover:-translate-y-1">
       
       {/* Top Navigation Bar inside the card */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2 z-10">

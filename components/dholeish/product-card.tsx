@@ -9,7 +9,7 @@ interface DholeishProductCardProps {
 
 export function DholeishProductCard({ title, subtitle, subtext, imageUrl }: DholeishProductCardProps) {
   return (
-    <div className="group relative bg-card/90 rounded-3xl p-3 shadow-2xl overflow-hidden flex flex-col h-[400px] border border-white/5 backdrop-blur-md transition-all hover:-translate-y-1">
+    <div className="group relative bg-card/90 rounded-3xl p-3 shadow-2xl overflow-hidden flex flex-col h-[400px] border border-border/50 backdrop-blur-md transition-all hover:-translate-y-1">
 
       {/* Top right glowing light effect */}
       <div className="absolute -top-10 -right-10 w-[250px] h-[250px] bg-pedestal-glow/40 blur-[50px] rounded-full pointer-events-none z-0" />

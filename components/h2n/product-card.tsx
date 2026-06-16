@@ -21,7 +21,7 @@ export function H2NProductCard({
   return (
     <div className={cn("group flex flex-col relative", className)}>
       <div className={cn(
-        "bg-card rounded-md w-full relative overflow-hidden flex items-center justify-center transition-colors",
+        "bg-card border border-border/50 rounded-md w-full relative overflow-hidden flex items-center justify-center transition-colors",
         featured ? "aspect-square md:aspect-[4/5] p-8" : "aspect-[3/4] p-6"
       )}>
         {/* Subtle shadow block in background to emulate the lighting */}

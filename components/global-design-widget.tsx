@@ -182,7 +182,7 @@ export function GlobalDesignWidget() {
         isDragging && "transition-none select-none",
         isMinimized 
           ? "rounded-full bg-primary text-primary-foreground p-3.5 cursor-grab active:cursor-grabbing hover:bg-primary/90 hover:scale-105 transition-transform"
-          : "rounded-xl border border-border/20 bg-background/80 backdrop-blur-md p-3 flex items-center gap-3 w-fit max-w-[95vw] cursor-grab active:cursor-grabbing"
+          : "rounded-xl border border-foreground/15 ring-1 ring-foreground/5 bg-background/80 backdrop-blur-md p-3 flex items-center gap-3 w-fit max-w-[95vw] cursor-grab active:cursor-grabbing"
       )}
     >
       {isMinimized ? (
