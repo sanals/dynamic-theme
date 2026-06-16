@@ -20,7 +20,7 @@
 
 import { FontPairingId } from "./font-config"
 
-export type DesignId = "rakery" | "h2n" | "synthesis" | "dholeish"
+export type DesignId = "rakery" | "h2n" | "synthesis" | "dholeish" | "saas" | "uikit"
 
 export interface DesignOption {
   id: DesignId
@@ -61,6 +61,20 @@ export const designs: DesignOption[] = [
     defaultPalette: "design-variant-7",
     defaultFont: "playfair",
   },
+  {
+    id: "saas",
+    label: "SaaS",
+    description: "Data-heavy application dashboard layout.",
+    defaultPalette: "design-variant-1",
+    defaultFont: "inter",
+  },
+  {
+    id: "uikit",
+    label: "UI Kit",
+    description: "Raw component library showcase to test theme coverage.",
+    defaultPalette: "design-variant-5",
+    defaultFont: "geist",
+  },
 ]
 
 export const DEFAULT_DESIGN: DesignId = "rakery"
@@ -71,6 +85,8 @@ export const darkLightPairs: Record<DesignId, { dark: ColorPalette; light: Color
   h2n: { dark: "design-variant-3", light: "design-variant-4" },
   synthesis: { dark: "design-variant-6", light: "design-variant-5" },
   dholeish: { dark: "design-variant-7", light: "design-variant-8" },
+  saas: { dark: "design-variant-1", light: "design-variant-2" },
+  uikit: { dark: "design-variant-6", light: "design-variant-5" },
 }
 
 /* ---------------------------------------------------------------- */

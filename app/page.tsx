@@ -9,6 +9,8 @@ import { RakeryShell } from "@/components/designs/rakery-shell"
 import { H2NShell } from "@/components/designs/h2n-shell"
 import { SynthesisShell } from "@/components/designs/synthesis-shell"
 import { DholeishShell } from "@/components/designs/dholeish-shell"
+import { UiKitShell } from "@/components/designs/uikit-shell"
+import { SaasShell } from "@/components/designs/saas-shell"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { type DesignId } from "@/lib/design-config"
 import { useTheme } from "next-themes"
@@ -22,6 +24,8 @@ function renderShell(designId: DesignId) {
       {designId === "synthesis" && <SynthesisShell />}
       {designId === "h2n" && <H2NShell />}
       {designId === "rakery" && <RakeryShell />}
+      {designId === "uikit" && <UiKitShell />}
+      {designId === "saas" && <SaasShell />}
     </div>
   )
 }
