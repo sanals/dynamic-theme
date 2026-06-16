@@ -179,13 +179,22 @@ export function generatePalette(
 
   // 2. Determine general theme brightness (dark vs light theme)
   // Check if background color is locked. If yes, check if it's light or dark.
-  // Otherwise, randomly decide (80% chance dark, 20% light for premium styles).
+  // Otherwise, use the seed color's lightness to infer the user's intent.
+  // If the seed color is very light (L > 75), it's probably a light theme.
+  // If the seed color is very dark (L < 25), it's probably a dark theme.
+  // If it's a mid-tone color, randomly favor dark themes (80%).
   let isDark = true
   if (lockedKeys.background) {
     const bgHsl = hexToHsl(currentColors.background)
     isDark = bgHsl.l < 50
   } else {
-    isDark = Math.random() < 0.8
+    if (seedHsl.l > 75) {
+      isDark = false // Seed is light, assume light theme
+    } else if (seedHsl.l < 25) {
+      isDark = true // Seed is dark, assume dark theme
+    } else {
+      isDark = Math.random() < 0.8 // Random fallback, favor dark
+    }
   }
 
   // Helper helper to generate HSL

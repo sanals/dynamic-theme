@@ -17,7 +17,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
-import { getContrastInfo, extractDominantColor, autoFixContrast } from "@/lib/color-utils"
+import { getContrastInfo, extractDominantColor, autoFixContrast, getRelativeLuminance } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
 import { POPULAR_GOOGLE_FONTS } from "@/lib/popular-fonts"
@@ -208,9 +208,21 @@ function DraggableColorPicker({
         e.preventDefault()
         e.dataTransfer.dropEffect = "move"
       }}
-      onDrop={(e) => {
+      onDrop={async (e) => {
         e.preventDefault()
         if (isLocked) return
+
+        const file = e.dataTransfer.files?.[0]
+        if (file && file.type.startsWith("image/")) {
+          try {
+            const hex = await extractDominantColor(file)
+            onChange(hex)
+          } catch (err) {
+            console.error("Failed to extract color from dropped image", err)
+          }
+          return
+        }
+
         const sourceKey = e.dataTransfer.getData("text/plain") as keyof CustomColors
         if (sourceKey && sourceKey !== colorKey) {
           onSwap(sourceKey, colorKey)
@@ -220,7 +232,7 @@ function DraggableColorPicker({
         "flex flex-col items-center gap-1 p-1 -m-1 rounded hover:bg-white/5 transition-colors group/item",
         !isLocked && !isHoveringInput ? "cursor-grab active:cursor-grabbing" : ""
       )}
-      title={isLocked ? "Color locked. Click label to copy hex." : "Drag to swap. Click label to copy hex."}
+      title={isLocked ? "Color locked. Click label to copy hex." : "Drag to swap. Drop an image to extract its average color. Click label to copy hex."}
     >
       <button
         type="button"
@@ -334,6 +346,23 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [googleFontSearch, setGoogleFontSearch] = useState("")
   const [shareDropdownOpen, setShareDropdownOpen] = useState(false)
   const [wcagExpanded, setWcagExpanded] = useState(false)
+  const [wcagMessage, setWcagMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedWcag = window.localStorage.getItem("wcag-expanded")
+      if (storedWcag === "true") setWcagExpanded(true)
+    }
+  }, [])
+
+  const toggleWcag = () => {
+    setWcagExpanded(prev => {
+      const next = !prev
+      window.localStorage.setItem("wcag-expanded", String(next))
+      return next
+    })
+  }
+
   const [extendedColorsExpanded, setExtendedColorsExpanded] = useState(false)
   const [pedestalColorsExpanded, setPedestalColorsExpanded] = useState(false)
   const [presetsExpanded, setPresetsExpanded] = useState(false)
@@ -629,12 +658,22 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     try {
       const dominantHex = await extractDominantColor(file)
 
-      // Temporarily lock an unlocked core color to the extracted hex
-      // prioritizing primary, then background, then secondary.
+      // Temporarily lock an unlocked core color to the extracted hex.
+      // If the color is very light or very dark, it's likely a background color.
+      // If it's a mid-tone colorful color, it's likely an accent color.
       const tempColors = { ...customColors }
       const tempLocked = { ...lockedColors }
       
-      if (!lockedColors.primary) {
+      const lum = getRelativeLuminance(dominantHex)
+      const isBackgroundLike = lum > 0.7 || lum < 0.15
+
+      if (isBackgroundLike && !lockedColors.background) {
+        tempColors.background = dominantHex
+        tempLocked.background = true
+      } else if (!isBackgroundLike && !lockedColors.primary) {
+        tempColors.primary = dominantHex
+        tempLocked.primary = true
+      } else if (!lockedColors.primary) {
         tempColors.primary = dominantHex
         tempLocked.primary = true
       } else if (!lockedColors.background) {
@@ -698,24 +737,36 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     const secondaryBg = customColors.secondary || "#000000"
     const newSecondaryFg = autoFixContrast(secondaryBg, customColors.secondaryForeground || "#ffffff", 4.5)
 
-    applyBulkColors([
-      customColors.background,
-      newFg,
-      customColors.card,
-      newCardFg,
-      customColors.primary,
-      newPrimaryFg,
-      customColors.secondary,
-      newSecondaryFg,
-      customColors.muted,
-      newMutedFg,
-      customColors.border,
-      customColors.pedestalGlow,
-      customColors.pedestalTop,
-      customColors.pedestalTopBorder,
-      customColors.pedestalBody,
-      customColors.pedestalShadow,
-    ])
+    const hasChanges =
+      newFg !== customColors.foreground ||
+      newCardFg !== customColors.cardForeground ||
+      newPrimaryFg !== customColors.primaryForeground ||
+      newMutedFg !== customColors.mutedForeground ||
+      newSecondaryFg !== customColors.secondaryForeground
+
+    if (!hasChanges) {
+      setWcagMessage("Maximum possible contrast reached. Cannot improve further without altering background colors.")
+      setTimeout(() => setWcagMessage(null), 4000)
+    } else {
+      applyBulkColors([
+        customColors.background,
+        newFg,
+        customColors.card,
+        newCardFg,
+        customColors.primary,
+        newPrimaryFg,
+        customColors.secondary,
+        newSecondaryFg,
+        customColors.muted,
+        newMutedFg,
+        customColors.border,
+        customColors.pedestalGlow,
+        customColors.pedestalTop,
+        customColors.pedestalTopBorder,
+        customColors.pedestalBody,
+        customColors.pedestalShadow,
+      ])
+    }
   }
 
   const handleRandomizePalette = () => {
@@ -1034,7 +1085,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
             {/* View cluster */}
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setWcagExpanded(!wcagExpanded)}
+                onClick={toggleWcag}
                 title="Toggle Contrast Accessibility (WCAG) Checker"
                 className={cn(
                   "h-6 px-1.5 flex items-center justify-center gap-1.5 rounded transition-colors text-xs font-semibold cursor-pointer",
@@ -1675,7 +1726,14 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       {mounted && wcagExpanded && (
         <div className="flex flex-col gap-2 border-t border-border/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
           <div className="flex items-center justify-between pb-1">
-             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Accessibility (WCAG)</span>
+             <div className="flex items-center gap-3">
+               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Accessibility (WCAG)</span>
+               {wcagMessage && (
+                 <span className="text-[9px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-in fade-in zoom-in slide-in-from-left-2 duration-300">
+                   {wcagMessage}
+                 </span>
+               )}
+             </div>
              {theme === "custom-palette" && (
                <button
                  type="button"
@@ -1773,10 +1831,30 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                         {info.ratio.toFixed(1)}:1
                       </span>
 
-                      <div className="relative group/tooltip">
+                      <div className="relative group/tooltip flex items-center gap-1.5">
                         <span className={cn("text-[9px] font-black uppercase px-1 py-0.5 rounded leading-none shrink-0 tracking-wider cursor-help", levelBadgeClass)}>
                           {info.level}
                         </span>
+
+                        {theme === "custom-palette" && info.level !== "AAA" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetRatio = info.level === "AA" ? 7.0 : 4.5
+                              const fixedFg = autoFixContrast(bg, fg, targetRatio)
+                              if (fixedFg === fg) {
+                                setWcagMessage("Maximum possible contrast reached. Cannot improve further without altering the background color.")
+                                setTimeout(() => setWcagMessage(null), 4000)
+                              } else {
+                                setCustomColor(pair.fgKey, fixedFg)
+                              }
+                            }}
+                            title={info.level === "AA" ? "Auto-fix to AAA (Enhanced Contrast ≥ 7.0:1)" : "Auto-fix to AA (Minimum Contrast ≥ 4.5:1)"}
+                            className="p-0.5 rounded border border-white/5 bg-white/5 hover:bg-white/15 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Wand2 className="size-2.5" />
+                          </button>
+                        )}
 
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:flex flex-col gap-1 w-52 p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[10px] text-zinc-300 shadow-2xl z-50 pointer-events-none select-none text-center animate-in fade-in slide-in-from-bottom-1 duration-150">
                           <span className="font-bold text-white leading-tight">{tooltipTitle}</span>

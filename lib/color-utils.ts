@@ -106,11 +106,10 @@ export function autoFixContrast(bgHex: string, fgHex: string, targetRatio: numbe
   const currentRatio = getContrastRatio(bgHex, fgHex)
   if (currentRatio >= targetRatio) return fgHex
 
-  const bgLum = getRelativeLuminance(bgHex)
-  
-  // If background is dark (luminance < 0.3), we target white. Otherwise, black.
-  // 0.3 is a good heuristic threshold.
-  const targetHex = bgLum < 0.3 ? "#FFFFFF" : "#000000"
+  // Target white or black based on which provides the highest possible contrast
+  const contrastWithWhite = getContrastRatio(bgHex, "#FFFFFF")
+  const contrastWithBlack = getContrastRatio(bgHex, "#000000")
+  const targetHex = contrastWithWhite > contrastWithBlack ? "#FFFFFF" : "#000000"
 
   let low = 0
   let high = 1
@@ -155,8 +154,11 @@ export async function extractDominantColor(file: File): Promise<string> {
       ctx.drawImage(img, 0, 0, 64, 64)
       
       const data = ctx.getImageData(0, 0, 64, 64).data
-      let r = 0, g = 0, b = 0, count = 0
       
+      const bins = new Map<number, { r: number, g: number, b: number, count: number }>()
+      let maxCount = 0
+      let bestBin = null
+
       for (let i = 0; i < data.length; i += 4) {
         const _r = data[i]
         const _g = data[i + 1]
@@ -166,30 +168,44 @@ export async function extractDominantColor(file: File): Promise<string> {
         // Ignore transparent pixels
         if (_a < 128) continue
         
-        // Ignore pure grays/whites/blacks to get a "colorful" dominant
-        const max = Math.max(_r, _g, _b)
-        const min = Math.min(_r, _g, _b)
-        if (max - min < 20) continue // Grayish
-        if (max < 30 || min > 225) continue // Too dark or too light
+        // Group similar colors into bins (32x32x32 color space chunks = 512 bins)
+        // This effectively clusters grainy noise together
+        const rBin = _r >> 5
+        const gBin = _g >> 5
+        const bBin = _b >> 5
+        const binIndex = (rBin << 6) | (gBin << 3) | bBin
+        
+        let bin = bins.get(binIndex)
+        if (!bin) {
+          bin = { r: 0, g: 0, b: 0, count: 0 }
+          bins.set(binIndex, bin)
+        }
+        
+        bin.r += _r
+        bin.g += _g
+        bin.b += _b
+        bin.count++
 
-        r += _r
-        g += _g
-        b += _b
-        count++
+        if (bin.count > maxCount) {
+          maxCount = bin.count
+          bestBin = bin
+        }
       }
       
       URL.revokeObjectURL(url)
       
-      if (count === 0) {
-        // Fallback to center pixel if no colorful pixel found
+      let r = 0, g = 0, b = 0
+      if (bestBin) {
+        // Average the pixels inside the winning cluster to get a perfectly smooth representative color
+        r = Math.floor(bestBin.r / bestBin.count)
+        g = Math.floor(bestBin.g / bestBin.count)
+        b = Math.floor(bestBin.b / bestBin.count)
+      } else {
+        // Fallback to center pixel if completely transparent or empty
         const fallbackData = ctx.getImageData(32, 32, 1, 1).data
         r = fallbackData[0]
         g = fallbackData[1]
         b = fallbackData[2]
-      } else {
-        r = Math.floor(r / count)
-        g = Math.floor(g / count)
-        b = Math.floor(b / count)
       }
       
       const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()

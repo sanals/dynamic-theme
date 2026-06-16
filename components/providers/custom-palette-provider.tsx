@@ -168,6 +168,8 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   }
 
   const setCustomColor = (key: keyof CustomColors, value: string) => {
+    if (customColors[key] === value) return
+
     const now = Date.now()
     const isContinuous = key === lastEditedKey.current && (now - lastPushTime.current < 800)
 
@@ -185,29 +187,40 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   }
 
   const applyBulkColors = (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => {
-    pushToHistory(customColors)
-    lastEditedKey.current = null
-    lastPushTime.current = 0
-
     setCustomColors((prev) => {
       const next = { ...prev }
-      if (colors[0] && !lockedColors?.background) next.background = colors[0]
-      if (colors[1] && !lockedColors?.foreground) next.foreground = colors[1]
-      if (colors[2] && !lockedColors?.card) next.card = colors[2]
-      if (colors[3] && !lockedColors?.cardForeground) next.cardForeground = colors[3]
-      if (colors[4] && !lockedColors?.primary) next.primary = colors[4]
-      if (colors[5] && !lockedColors?.primaryForeground) next.primaryForeground = colors[5]
-      if (colors[6] && !lockedColors?.secondary) next.secondary = colors[6]
-      if (colors[7] && !lockedColors?.secondaryForeground) next.secondaryForeground = colors[7]
-      if (colors[8] && !lockedColors?.muted) next.muted = colors[8]
-      if (colors[9] && !lockedColors?.mutedForeground) next.mutedForeground = colors[9]
-      if (colors[10] && !lockedColors?.border) next.border = colors[10]
-      if (colors[11] && !lockedColors?.pedestalGlow) next.pedestalGlow = colors[11]
-      if (colors[12] && !lockedColors?.pedestalTop) next.pedestalTop = colors[12]
-      if (colors[13] && !lockedColors?.pedestalTopBorder) next.pedestalTopBorder = colors[13]
-      if (colors[14] && !lockedColors?.pedestalBody) next.pedestalBody = colors[14]
-      if (colors[15] && !lockedColors?.pedestalShadow) next.pedestalShadow = colors[15]
-      
+      let hasChanges = false
+
+      const trySet = (key: keyof CustomColors, val: string | undefined, isLocked: boolean | undefined) => {
+        if (val && !isLocked && next[key] !== val) {
+          next[key] = val
+          hasChanges = true
+        }
+      }
+
+      trySet("background", colors[0], lockedColors?.background)
+      trySet("foreground", colors[1], lockedColors?.foreground)
+      trySet("card", colors[2], lockedColors?.card)
+      trySet("cardForeground", colors[3], lockedColors?.cardForeground)
+      trySet("primary", colors[4], lockedColors?.primary)
+      trySet("primaryForeground", colors[5], lockedColors?.primaryForeground)
+      trySet("secondary", colors[6], lockedColors?.secondary)
+      trySet("secondaryForeground", colors[7], lockedColors?.secondaryForeground)
+      trySet("muted", colors[8], lockedColors?.muted)
+      trySet("mutedForeground", colors[9], lockedColors?.mutedForeground)
+      trySet("border", colors[10], lockedColors?.border)
+      trySet("pedestalGlow", colors[11], lockedColors?.pedestalGlow)
+      trySet("pedestalTop", colors[12], lockedColors?.pedestalTop)
+      trySet("pedestalTopBorder", colors[13], lockedColors?.pedestalTopBorder)
+      trySet("pedestalBody", colors[14], lockedColors?.pedestalBody)
+      trySet("pedestalShadow", colors[15], lockedColors?.pedestalShadow)
+
+      if (!hasChanges) return prev
+
+      pushToHistory(prev)
+      lastEditedKey.current = null
+      lastPushTime.current = 0
+
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       return next
     })
