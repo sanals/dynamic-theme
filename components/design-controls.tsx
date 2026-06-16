@@ -258,30 +258,38 @@ function DraggableColorPicker({
         )}
       </div>
 
-      <input
-        type="text"
-        value={safeValue}
-        readOnly={isLocked}
-        onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
-        onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
-        onFocus={(e) => {
-          if (!isLocked) setIsHoveringInput(true)
-          e.target.select()
-        }}
-        onClick={(e) => e.currentTarget.select()}
-        onBlur={() => setIsHoveringInput(false)}
-        onPaste={(e) => e.stopPropagation()}
-        onChange={(e) => {
-          let val = e.target.value.trim().replace(/#/g, "")
-          if (val.length > 0) {
-            onChange("#" + val)
-          } else {
-            onChange("")
-          }
-        }}
-        placeholder="#000000"
-        className="w-[68px] text-[11px] bg-background/50 border border-border/50 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 mt-0.5"
-      />
+      <div className="relative mt-0.5">
+        <input
+          type="text"
+          value={safeValue}
+          readOnly={isLocked}
+          onMouseEnter={() => !isLocked && setIsHoveringInput(true)}
+          onMouseLeave={() => !isLocked && setIsHoveringInput(false)}
+          onFocus={(e) => {
+            if (!isLocked) setIsHoveringInput(true)
+            e.target.select()
+          }}
+          onClick={(e) => e.currentTarget.select()}
+          onBlur={() => setIsHoveringInput(false)}
+          onPaste={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            let val = e.target.value.trim().replace(/#/g, "")
+            if (val.length > 0) {
+              onChange("#" + val)
+            } else {
+              onChange("")
+            }
+          }}
+          placeholder="#000000"
+          className="w-[68px] text-[11px] bg-background/50 border border-border/50 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 relative z-10"
+        />
+        <div 
+          key={safeValue} 
+          className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-foreground pointer-events-none animate-zoom-fade z-20"
+        >
+          {safeValue}
+        </div>
+      </div>
     </div>
   )
 }
@@ -303,7 +311,22 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     if (!document.startViewTransition) return _setDesign(newDesign)
     document.startViewTransition(() => flushSync(() => _setDesign(newDesign)))
   }
-  const { customColors, setCustomColor, applyBulkColors, resetCustomColors, swapColors, customRadius, setCustomRadius, undo, redo, canUndo, canRedo } = useCustomPalette()
+  const { 
+    customColors, 
+    setCustomColor, 
+    applyBulkColors, 
+    resetCustomColors, 
+    swapColors, 
+    customRadius, 
+    setCustomRadius, 
+    lockedColors,
+    toggleLock,
+    setLockedColors,
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo 
+  } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -414,7 +437,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     dholeish: "design-variant-7",
   })
 
-  const [lockedColors, setLockedColors] = useState<Partial<Record<keyof CustomColors, boolean>>>({})
+
 
   const [activeHexColors, setActiveHexColors] = useState<CustomColors>(customColors)
 
@@ -464,12 +487,6 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     return () => observer.disconnect()
   }, [mounted, theme])
 
-  const toggleLock = (key: keyof CustomColors) => {
-    setLockedColors((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }))
-  }
 
   const [presets, setPresets] = useState<Preset[]>(BUILTIN_PRESETS)
   const [newPresetName, setNewPresetName] = useState("")
@@ -594,7 +611,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
         newColors.pedestalTopBorder || customColors.pedestalTopBorder,
         newColors.pedestalBody || customColors.pedestalBody,
         newColors.pedestalShadow || customColors.pedestalShadow,
-      ])
+      ], lockedColors)
       setAiPrompt("")
     } catch (err) {
       console.error(err)
@@ -612,16 +629,29 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     try {
       const dominantHex = await extractDominantColor(file)
 
-      // Temporarily lock the primary color to the extracted hex
-      // and generate a palette around it
-      const tempColors = { ...customColors, primary: dominantHex }
+      // Temporarily lock an unlocked core color to the extracted hex
+      // prioritizing primary, then background, then secondary.
+      const tempColors = { ...customColors }
+      const tempLocked = { ...lockedColors }
+      
+      if (!lockedColors.primary) {
+        tempColors.primary = dominantHex
+        tempLocked.primary = true
+      } else if (!lockedColors.background) {
+        tempColors.background = dominantHex
+        tempLocked.background = true
+      } else if (!lockedColors.secondary) {
+        tempColors.secondary = dominantHex
+        tempLocked.secondary = true
+      }
+
       const newPalette = generatePalette(
         tempColors,
-        { ...lockedColors, primary: true }, // Force primary to be locked
+        tempLocked,
         activeDesign
       )
 
-      // Apply the newly generated palette!
+      // Apply the newly generated palette, passing lockedColors to prevent overwriting
       applyBulkColors([
         newPalette.background,
         newPalette.foreground,
@@ -639,7 +669,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
         newPalette.pedestalTopBorder,
         newPalette.pedestalBody,
         newPalette.pedestalShadow,
-      ])
+      ], lockedColors)
     } catch (err) {
       console.error(err)
       alert("Failed to extract color from image.")
@@ -707,7 +737,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       newColors.pedestalTopBorder,
       newColors.pedestalBody,
       newColors.pedestalShadow,
-    ])
+    ], lockedColors)
   }
 
   const handleSwapColors = (source: keyof CustomColors, target: keyof CustomColors) => {
@@ -1457,7 +1487,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                   type="button"
                   onClick={() => imageFileInputRef.current?.click()}
                   disabled={isExtractingImage || isGeneratingAi}
-                  title="Extract palette from Image"
+                  title={Object.values(lockedColors).some(Boolean) ? "Extract palette from Image (Locked colors may cause the extracted color to apply to secondary sections)" : "Extract palette from Image"}
                   className="h-6 px-2 flex items-center justify-center gap-1.5 rounded bg-black/40 text-muted-foreground border border-white/10 hover:text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   {isExtractingImage ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3.5" />}

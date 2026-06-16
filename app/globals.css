@@ -431,3 +431,18 @@
     display: none;
   }
 }
+
+@keyframes zoomFade {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@utility animate-zoom-fade {
+  animation: zoomFade 1s ease forwards;
+}

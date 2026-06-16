@@ -47,9 +47,12 @@ interface CustomPaletteContextValue {
   applyBulkColors: (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
   resetCustomColors: () => void
   swapColors: (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
-  
   customRadius: number | null
   setCustomRadius: (radius: number | null) => void
+
+  lockedColors: Partial<Record<keyof CustomColors, boolean>>
+  toggleLock: (key: keyof CustomColors) => void
+  setLockedColors: (locks: Partial<Record<keyof CustomColors, boolean>>) => void
 
   undo: () => void
   redo: () => void
@@ -71,6 +74,15 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   // Undo/Redo stacks
   const [history, setHistory] = useState<CustomColors[]>([])
   const [future, setFuture] = useState<CustomColors[]>([])
+
+  const [lockedColors, setLockedColors] = useState<Partial<Record<keyof CustomColors, boolean>>>({})
+
+  const toggleLock = (key: keyof CustomColors) => {
+    setLockedColors((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
 
   const lastEditedKey = useRef<keyof CustomColors | null>(null)
   const lastPushTime = useRef<number>(0)
@@ -268,6 +280,9 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
         swapColors,
         customRadius,
         setCustomRadius,
+        lockedColors,
+        toggleLock,
+        setLockedColors,
         undo,
         redo,
         canUndo: history.length > 0,
