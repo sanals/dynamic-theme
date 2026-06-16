@@ -1866,7 +1866,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
 
       {/* Contrast Accessibility Checker (Available in all modes) */}
       {mounted && wcagExpanded && (
-        <div className="flex flex-col gap-2 border-t border-border/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
+        <div className="flex flex-col gap-2 border-t border-white/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
           <div className="flex items-center justify-between pb-1">
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Accessibility (WCAG)</span>
