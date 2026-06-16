@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef } from "react"
 import { useTheme } from "next-themes"
+import { autoFixContrast } from "@/lib/color-utils"
 
 export type CustomColors = {
   background: string
@@ -215,7 +216,33 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       trySet("pedestalBody", colors[14], lockedColors?.pedestalBody)
       trySet("pedestalShadow", colors[15], lockedColors?.pedestalShadow)
 
-      if (!hasChanges) return prev
+      // Legibility Safety Net
+      const MIN_RATIO = 2.5;
+      let wasModified = false;
+      const enforce = (bgKey: keyof CustomColors, fgKey: keyof CustomColors) => {
+        if (!lockedColors?.[bgKey] && !lockedColors?.[fgKey]) {
+          const newFg = autoFixContrast(next[bgKey], next[fgKey], MIN_RATIO);
+          if (newFg.toUpperCase() !== next[fgKey].toUpperCase()) {
+            next[fgKey] = newFg;
+            wasModified = true;
+          }
+        }
+      };
+
+      enforce("background", "foreground");
+      enforce("card", "cardForeground");
+      enforce("primary", "primaryForeground");
+      enforce("secondary", "secondaryForeground");
+      enforce("muted", "mutedForeground");
+
+      if (!hasChanges && !wasModified) return prev
+
+      if (wasModified) {
+        // Dispatch a custom event so the UI can notify the user
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("palette-auto-fixed"));
+        }
+      }
 
       pushToHistory(prev)
       lastEditedKey.current = null

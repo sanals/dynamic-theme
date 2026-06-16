@@ -17,7 +17,7 @@ import { fontPairings, type FontPairingId } from "@/lib/font-config"
 import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
-import { getContrastInfo, extractDominantColor, autoFixContrast, getRelativeLuminance } from "@/lib/color-utils"
+import { getContrastInfo, extractDominantColor, autoFixContrast, getRelativeLuminance, getContrastRatio } from "@/lib/color-utils"
 import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
 import { toPng } from "html-to-image"
 import { POPULAR_GOOGLE_FONTS } from "@/lib/popular-fonts"
@@ -348,11 +348,21 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   const [wcagExpanded, setWcagExpanded] = useState(false)
   const [wcagMessage, setWcagMessage] = useState<string | null>(null)
 
+  const [autoFixMessage, setAutoFixMessage] = useState<string | null>(null)
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedWcag = window.localStorage.getItem("wcag-expanded")
       if (storedWcag === "true") setWcagExpanded(true)
     }
+
+    const handleAutoFixed = () => {
+      setAutoFixMessage("Palette colors were automatically adjusted for legibility.")
+      setTimeout(() => setAutoFixMessage(null), 5000)
+    }
+
+    window.addEventListener("palette-auto-fixed", handleAutoFixed)
+    return () => window.removeEventListener("palette-auto-fixed", handleAutoFixed)
   }, [])
 
   const toggleWcag = () => {
@@ -1030,8 +1040,20 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     })
   }
 
+  const currentContrast = getContrastRatio(customColors.background, customColors.foreground);
+  const isPanicMode = theme === "custom-palette" && currentContrast < 2.0;
+
   return (
     <div className="relative flex flex-col gap-3.5 items-center w-full">
+
+      {/* Auto-Fix Toast */}
+      {mounted && autoFixMessage && !isPanicMode && (
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-[90] bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md text-emerald-400 text-[10px] font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 whitespace-nowrap">
+          <Wand2 className="size-3" />
+          {autoFixMessage}
+        </div>
+      )}
+
       {/* Top Row: Selectors + Actions */}
       <div className="flex flex-wrap items-center justify-center gap-3 w-full">
         <Segmented<DesignId>
@@ -1723,6 +1745,33 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Panic Mode / Emergency Reset Inline Banner */}
+      {mounted && isPanicMode && (
+        <div className="w-[95%] sm:w-[80%] max-w-lg flex items-center p-3 mt-1 rounded-xl border border-red-500 bg-zinc-950 shadow-md animate-in slide-in-from-top-2 fade-in duration-300 mx-auto" style={{ color: "white" }}>
+          <div className="relative z-10 flex w-full flex-col sm:flex-row items-center gap-4">
+            <div className="flex shrink-0 items-center justify-center size-8 rounded-full bg-red-500 text-white shadow-sm ring-2 ring-red-500/30">
+              <Eye className="size-4" />
+            </div>
+            <div className="flex-1 text-center sm:text-left min-w-0">
+              <h3 className="text-xs font-bold text-white tracking-tight">Low Contrast Detected</h3>
+              <p className="text-[10px] text-zinc-300 mt-0.5 leading-snug">
+                Your text might be hard to read. Use the reset button if you get stuck.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                resetCustomColors()
+                setTheme(lastDefaultPalettes[activeDesign])
+              }}
+              className="shrink-0 h-7 px-4 rounded-full bg-red-500 hover:bg-red-400 text-white text-[10px] font-bold transition-all shadow-sm flex items-center gap-1.5"
+            >
+              <RotateCcw className="size-3" />
+              Reset Palette
+            </button>
           </div>
         </div>
       )}

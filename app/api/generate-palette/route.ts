@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { autoFixContrast } from "@/lib/color-utils";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -112,8 +113,28 @@ Rules:
         }
       }
 
-      console.log("[✨ AI Magic Generator] Successfully parsed and normalized theme!");
-      return NextResponse.json(normalizedTheme);
+      // Apply Safety Net (Soft contrast 2.5 ratio)
+      const MIN_RATIO = 2.5;
+      let wasModified = false;
+      
+      const enforce = (bgKey: string, fgKey: string) => {
+        if (normalizedTheme[bgKey] && normalizedTheme[fgKey]) {
+          const newFg = autoFixContrast(normalizedTheme[bgKey], normalizedTheme[fgKey], MIN_RATIO);
+          if (newFg.toUpperCase() !== normalizedTheme[fgKey].toUpperCase()) {
+            normalizedTheme[fgKey] = newFg;
+            wasModified = true;
+          }
+        }
+      };
+
+      enforce("background", "foreground");
+      enforce("card", "cardForeground");
+      enforce("primary", "primaryForeground");
+      enforce("secondary", "secondaryForeground");
+      enforce("muted", "mutedForeground");
+
+      console.log(`[✨ AI Magic Generator] Successfully parsed and normalized theme! Modified for contrast: ${wasModified}`);
+      return NextResponse.json({ ...normalizedTheme, _wasModified: wasModified });
     } catch (e) {
       console.error("Failed to parse Gemini JSON:", jsonStr);
       return NextResponse.json({ error: "Failed to parse generated theme" }, { status: 500 });
