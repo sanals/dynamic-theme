@@ -1,6 +1,6 @@
 import { Menu } from "lucide-react"
 
-export function GalleryHeader() {
+export function GalleryHeader({ brandName = "Verdant" }: { brandName?: string }) {
   return (
     <header className="w-full pt-6 pb-4 px-6 md:px-12 bg-transparent z-50">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
@@ -15,7 +15,7 @@ export function GalleryHeader() {
           <a href="#" className="hover:opacity-70 transition-opacity">Hobroe</a>
 
           <div className="text-2xl font-black tracking-[0.2em] px-4 font-sans uppercase relative">
-            <span className="opacity-90">VERDANT</span>
+            <span className="opacity-90">{brandName.toUpperCase()}</span>
           </div>
 
           <a href="#" className="hover:opacity-70 transition-opacity">Sonero</a>

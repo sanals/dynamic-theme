@@ -1,7 +1,7 @@
 import { products } from "@/lib/products"
 import { MinimalProductCard } from "./product-card"
 
-export function MinimalProductGrid() {
+export function MinimalProductGrid({ brandName }: { brandName?: string }) {
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-12">
       <div className="columns-1 md:columns-2 lg:columns-3 gap-8 [column-fill:balance]">

@@ -117,6 +117,94 @@ export const BUILTIN_PRESETS: Preset[] = [
       pedestalBody: "#dfd5c2",
       pedestalShadow: "#2b2a2712",
     }
+  },
+  {
+    id: "desert-sun",
+    name: "Desert Sun",
+    colors: {
+      background: "#faf089",
+      foreground: "#23221A",
+      card: "#FFFFFF",
+      cardForeground: "#2C2B21",
+      primary: "#DCCB09",
+      primaryForeground: "#09090b",
+      secondary: "#F8E2D3",
+      secondaryForeground: "#09090b",
+      muted: "#EDEDE8",
+      mutedForeground: "#6F6C52",
+      border: "#E2E1D5",
+      pedestalGlow: "#F5E10A66",
+      pedestalTop: "#EFEFEB",
+      pedestalTopBorder: "#C4B40826",
+      pedestalBody: "#E3E2DE",
+      pedestalShadow: "#54534526",
+    }
+  },
+  {
+    id: "ember-obsidian",
+    name: "Ember Obsidian",
+    colors: {
+      background: "#0F0D0C",
+      foreground: "#F3EEE6",
+      card: "#1A1816",
+      cardForeground: "#F3EEE6",
+      primary: "#F17730",
+      primaryForeground: "#15110D",
+      secondary: "#292624",
+      secondaryForeground: "#F3EEE6",
+      muted: "#292624",
+      mutedForeground: "#A49D94",
+      border: "#FFFFFF14",
+      pedestalGlow: "#ff0000",
+      pedestalTop: "#3A2A20",
+      pedestalTopBorder: "#4D3A2F",
+      pedestalBody: "#241913",
+      pedestalShadow: "#0E0A08",
+    }
+  },
+  {
+    id: "pine-night",
+    name: "Pine Night",
+    colors: {
+      background: "#111715",
+      foreground: "#F1F4F2",
+      card: "#1D2A24",
+      cardForeground: "#E9EDEA",
+      primary: "#294C36",
+      primaryForeground: "#ffffff",
+      secondary: "#324130",
+      secondaryForeground: "#ffffff",
+      muted: "#223029",
+      mutedForeground: "#8AA895",
+      border: "#2D4339",
+      pedestalGlow: "#59A67566",
+      pedestalTop: "#28332C",
+      pedestalTopBorder: "#47855E40",
+      pedestalBody: "#1E2420",
+      pedestalShadow: "#000000",
+    }
+  },
+  {
+    id: "slate-pearl",
+    name: "Slate Pearl",
+    colors: {
+      background: "#F1F2F6",
+      foreground: "#1A1C23",
+      card: "#FFFFFF",
+      cardForeground: "#21232C",
+      primary: "#5A648C",
+      primaryForeground: "#E3E3E3",
+      secondary: "#E2E7E9",
+      secondaryForeground: "#09090b",
+      muted: "#E8E9ED",
+      mutedForeground: "#626884",
+      border: "#D5D7E2",
+      pedestalGlow: "#636F9C66",
+      pedestalTop: "#EBECEF",
+      pedestalTopBorder: "#50597C26",
+      pedestalBody: "#DEDFE3",
+      pedestalShadow: "#45485426",
+    }
   }
 ]
 
@@ -295,8 +383,8 @@ function DraggableColorPicker({
           placeholder="#000000"
           className="w-[68px] text-[11px] bg-background/50 border border-border/50 rounded text-center text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary h-5 px-1 relative z-10"
         />
-        <div 
-          key={safeValue} 
+        <div
+          key={safeValue}
           className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-foreground pointer-events-none animate-zoom-fade z-20"
         >
           {safeValue}
@@ -323,21 +411,21 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     if (!document.startViewTransition) return _setDesign(newDesign)
     document.startViewTransition(() => flushSync(() => _setDesign(newDesign)))
   }
-  const { 
-    customColors, 
-    setCustomColor, 
-    applyBulkColors, 
-    resetCustomColors, 
-    swapColors, 
-    customRadius, 
-    setCustomRadius, 
+  const {
+    customColors,
+    setCustomColor,
+    applyBulkColors,
+    resetCustomColors,
+    swapColors,
+    customRadius,
+    setCustomRadius,
     lockedColors,
     toggleLock,
     setLockedColors,
-    undo, 
-    redo, 
-    canUndo, 
-    canRedo 
+    undo,
+    redo,
+    canUndo,
+    canRedo
   } = useCustomPalette()
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
@@ -675,7 +763,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       // If it's a mid-tone colorful color, it's likely an accent color.
       const tempColors = { ...customColors }
       const tempLocked = { ...lockedColors }
-      
+
       const lum = getRelativeLuminance(dominantHex)
       const isBackgroundLike = lum > 0.7 || lum < 0.15
 
@@ -736,7 +824,7 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
 
     const bg = customColors.background || "#000000"
     const newFg = autoFixContrast(bg, customColors.foreground || "#ffffff", 4.5)
-    
+
     const cardBg = customColors.card || "#000000"
     const newCardFg = autoFixContrast(cardBg, customColors.cardForeground || "#ffffff", 4.5)
 
@@ -1097,12 +1185,12 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
                 {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
                 Copy Palette
               </button>
-                <input
-                  type="text"
-                  placeholder="Paste palette"
-                  onChange={handleBulkPaste}
-                  className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
+              <input
+                type="text"
+                placeholder="Paste palette"
+                onChange={handleBulkPaste}
+                className="h-6 w-24 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
               {/* Duplicate history controls removed */}
             </div>
 
@@ -1780,25 +1868,25 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
       {mounted && wcagExpanded && (
         <div className="flex flex-col gap-2 border-t border-border/20 pt-3 mt-2 w-full px-1 pb-2 animate-in slide-in-from-top-2 fade-in duration-200">
           <div className="flex items-center justify-between pb-1">
-             <div className="flex items-center gap-3">
-               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Accessibility (WCAG)</span>
-               {wcagMessage && (
-                 <span className="text-[9px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-in fade-in zoom-in slide-in-from-left-2 duration-300">
-                   {wcagMessage}
-                 </span>
-               )}
-             </div>
-             {theme === "custom-palette" && (
-               <button
-                 type="button"
-                 onClick={handleAutoFixWcag}
-                 title="Automatically adjust foreground colors to pass AA contrast"
-                 className="flex items-center gap-1.5 h-6 px-2.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 hover:text-emerald-300 transition-colors text-[10px] font-semibold cursor-pointer"
-               >
-                 <Wand2 className="size-3" />
-                 Auto-Fix All
-               </button>
-             )}
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Accessibility (WCAG)</span>
+              {wcagMessage && (
+                <span className="text-[9px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-in fade-in zoom-in slide-in-from-left-2 duration-300">
+                  {wcagMessage}
+                </span>
+              )}
+            </div>
+            {theme === "custom-palette" && (
+              <button
+                type="button"
+                onClick={handleAutoFixWcag}
+                title="Automatically adjust foreground colors to pass AA contrast"
+                className="flex items-center gap-1.5 h-6 px-2.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 hover:text-emerald-300 transition-colors text-[10px] font-semibold cursor-pointer"
+              >
+                <Wand2 className="size-3" />
+                Auto-Fix All
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 w-full">
             {[
