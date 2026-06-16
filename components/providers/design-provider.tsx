@@ -27,7 +27,7 @@ export function DesignProvider({ children, overrideValue }: { children: React.Re
   // Hydrate from storage after mount to avoid SSR mismatch.
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored === "rakery" || stored === "h2n" || stored === "synthesis" || stored === "dholeish") {
+    if (stored === "rakery" || stored === "h2n" || stored === "synthesis" || stored === "dholeish" || stored === "saas" || stored === "uikit") {
       setActive(stored as DesignId)
     }
   }, [])

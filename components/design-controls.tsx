@@ -464,6 +464,8 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
     h2n: "design-variant-3",
     synthesis: "design-variant-5",
     dholeish: "design-variant-7",
+    saas: "design-variant-9",
+    uikit: "design-variant-11",
   })
 
 
@@ -803,10 +805,13 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
   // Sync active theme with lastDefaultPalettes when a built-in theme is active
   useEffect(() => {
     if (theme && theme !== "custom-palette") {
-      setLastDefaultPalettes((prev) => ({
-        ...prev,
-        [activeDesign]: theme as ColorPalette,
-      }))
+      const pair = darkLightPairs[activeDesign]
+      if (theme === pair.dark || theme === pair.light) {
+        setLastDefaultPalettes((prev) => ({
+          ...prev,
+          [activeDesign]: theme as ColorPalette,
+        }))
+      }
     }
   }, [theme, activeDesign])
 

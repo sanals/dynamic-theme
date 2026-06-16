@@ -65,14 +65,14 @@ export const designs: DesignOption[] = [
     id: "saas",
     label: "SaaS",
     description: "Data-heavy application dashboard layout.",
-    defaultPalette: "design-variant-1",
+    defaultPalette: "design-variant-9",
     defaultFont: "inter",
   },
   {
     id: "uikit",
     label: "UI Kit",
     description: "Raw component library showcase to test theme coverage.",
-    defaultPalette: "design-variant-5",
+    defaultPalette: "design-variant-11",
     defaultFont: "geist",
   },
 ]
@@ -85,8 +85,8 @@ export const darkLightPairs: Record<DesignId, { dark: ColorPalette; light: Color
   h2n: { dark: "design-variant-3", light: "design-variant-4" },
   synthesis: { dark: "design-variant-6", light: "design-variant-5" },
   dholeish: { dark: "design-variant-7", light: "design-variant-8" },
-  saas: { dark: "design-variant-1", light: "design-variant-2" },
-  uikit: { dark: "design-variant-6", light: "design-variant-5" },
+  saas: { dark: "design-variant-9", light: "design-variant-10" },
+  uikit: { dark: "design-variant-11", light: "design-variant-12" },
 }
 
 /* ---------------------------------------------------------------- */
@@ -102,6 +102,10 @@ export type ColorPalette =
   | "design-variant-6"
   | "design-variant-7"
   | "design-variant-8"
+  | "design-variant-9"
+  | "design-variant-10"
+  | "design-variant-11"
+  | "design-variant-12"
   | "custom-palette"
 
 export interface PaletteOption {
@@ -124,6 +128,10 @@ export const allPaletteIds: ColorPalette[] = [
   "design-variant-6",
   "design-variant-7",
   "design-variant-8",
+  "design-variant-9",
+  "design-variant-10",
+  "design-variant-11",
+  "design-variant-12",
   "custom-palette",
 ]
 
@@ -190,6 +198,40 @@ export const palettesByDesign: Record<DesignId, PaletteOption[]> = {
       id: "design-variant-8",
       label: "Deep Woods",
       description: "Darker green with high contrast accents.",
+    },
+    {
+      id: "custom-palette",
+      label: "Custom",
+      description: "User defined palette.",
+    },
+  ],
+  saas: [
+    {
+      id: "design-variant-9",
+      label: "Midnight",
+      description: "Deep sea blue SaaS dark mode.",
+    },
+    {
+      id: "design-variant-10",
+      label: "Crisp",
+      description: "Sharp, clean slate SaaS light mode.",
+    },
+    {
+      id: "custom-palette",
+      label: "Custom",
+      description: "User defined palette.",
+    },
+  ],
+  uikit: [
+    {
+      id: "design-variant-11",
+      label: "Brutalist",
+      description: "High contrast pure black UI Kit.",
+    },
+    {
+      id: "design-variant-12",
+      label: "Neutral",
+      description: "Clean neutral grey UI Kit.",
     },
     {
       id: "custom-palette",
