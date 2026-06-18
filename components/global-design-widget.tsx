@@ -9,7 +9,7 @@ const STORAGE_KEY = "global-widget-state"
 
 type WidgetPos = { x: number; y: number }
 
-export function GlobalDesignWidget() {
+export function GlobalDesignWidget({ isStandalone = false }: { isStandalone?: boolean }) {
   const widgetRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
   
@@ -178,7 +178,7 @@ export function GlobalDesignWidget() {
       } : undefined}
       className={cn(
         "fixed z-[100] shadow-2xl transition-[background-color,border-color,box-shadow,transform] duration-200 ease-out",
-        !pos && "bottom-6 left-1/2 -translate-x-1/2",
+        !pos && "bottom-6 right-6",
         isDragging && "transition-none select-none",
         isMinimized 
           ? "rounded-full bg-primary text-primary-foreground p-3.5 cursor-grab active:cursor-grabbing hover:bg-primary/90 hover:scale-105 transition-transform"
@@ -191,7 +191,7 @@ export function GlobalDesignWidget() {
         </div>
       ) : (
         <div className="max-w-[90vw] w-fit pr-2 animate-in fade-in zoom-in-95 duration-200">
-          <DesignControls onMinimize={() => setIsMinimized(true)} />
+          <DesignControls isStandalone={isStandalone} onMinimize={() => setIsMinimized(true)} />
         </div>
       )}
     </div>

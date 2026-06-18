@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standalone Widget Test</title>
+  <style>
+    /* 
+      Some dummy CSS for the host site to prove 
+      that the widget's variables override them.
+    */
+    :root {
+      --primary: #999;
+      --background: #fff;
+      --foreground: #000;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: sans-serif;
+      margin: 0;
+      padding: 40px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .box {
+      background-color: var(--card, #f0f0f0);
+      color: var(--card-foreground, #000);
+      border: 1px solid var(--border, #ccc);
+      border-radius: var(--radius, 8px);
+      padding: 24px;
+      max-width: 600px;
+      margin-top: 20px;
+    }
+
+    button.primary-btn {
+      background-color: var(--primary);
+      color: var(--primary-foreground, #fff);
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--radius, 8px);
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>My Dummy SaaS Platform</h1>
+  <p>This is a 3rd party web app that knows nothing about React, Tailwind, or Next.js.</p>
+  
+  <div class="box">
+    <h2>Host Site Component</h2>
+    <p>This card's colors are bound to CSS variables. When the widget generates a palette, it will write the variables to the root, and this card will instantly theme itself!</p>
+    <button class="primary-btn">Primary Action</button>
+  </div>
+
+  <!-- The standalone widget script bundle -->
+  <script src="./public/theme-widget.js"></script>
+  
+  <!-- Initialize the widget -->
+  <script>
+    // Wait for window load just to be safe
+    window.addEventListener('DOMContentLoaded', () => {
+      // Check if it exists
+      if (window.ThemeWidget) {
+        ThemeWidget.init({
+          // Target where variables are injected. Usually document.documentElement (:root)
+          targetElement: () => document.documentElement
+        });
+      } else {
+        console.error("ThemeWidget not loaded!");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -393,9 +393,14 @@ function DraggableColorPicker({
   )
 }
 
-export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
+export function DesignControls({
+  onMinimize,
+  isStandalone = false
+}: {
+  onMinimize?: () => void
+  isStandalone?: boolean
+}) {
   const { theme, setTheme: _setTheme } = useTheme()
-
   const { activeDesign, setDesign: _setDesign } = useDesign()
   const { activeFont, setFont, setCustomFont, customFontName, dynamicGoogleFontName, setDynamicGoogleFont } = useFont()
 
@@ -1143,13 +1148,15 @@ export function DesignControls({ onMinimize }: { onMinimize: () => void }) {
 
       {/* Top Row: Selectors + Actions */}
       <div className="flex flex-wrap items-center justify-center gap-3 w-full">
-        <Segmented<DesignId>
-          label="Design"
-          icon={<Frame className="size-3.5" aria-hidden />}
-          options={designs}
-          value={activeDesign}
-          onChange={handleDesignChange}
-        />
+        {!isStandalone && (
+          <Segmented<DesignId>
+            label="Design"
+            icon={<Frame className="size-3.5" aria-hidden />}
+            options={designs}
+            value={activeDesign}
+            onChange={handleDesignChange}
+          />
+        )}
         <Segmented<"default" | "custom">
           label="Palette"
           icon={<Palette className="size-3.5" aria-hidden />}

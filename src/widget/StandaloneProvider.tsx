@@ -1,9 +1,9 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useRef } from "react"
-import { useTheme } from "next-themes"
+import React, { createContext, useContext, useEffect, useState, useRef } from "react"
 import { autoFixContrast } from "@/lib/color-utils"
 
+// Reuse the exact same CustomColors type from the main app
 export type CustomColors = {
   background: string
   foreground: string
@@ -24,50 +24,36 @@ export type CustomColors = {
 }
 
 const DEFAULT_CUSTOM_COLORS: CustomColors = {
-  background: "#18181b", // zinc-900
-  foreground: "#f4f4f5", // zinc-100
-  card: "#27272a",       // zinc-800
-  cardForeground: "#f4f4f5", // zinc-100
-  primary: "#3b82f6",    // blue-500
-  primaryForeground: "#18181b", // zinc-900
-  secondary: "#27272a",  // zinc-800
-  secondaryForeground: "#f4f4f5", // zinc-100
-  muted: "#27272a",      // zinc-800
-  mutedForeground: "#a1a1aa", // zinc-400
-  border: "#3f3f46",     // zinc-700
-  pedestalGlow: "#3b82f6",    // blue-500
-  pedestalTop: "#3f3f46",     // zinc-700
-  pedestalTopBorder: "#3b82f6", // blue-500
-  pedestalBody: "#27272a",    // zinc-800
-  pedestalShadow: "#000000",  // black
+  background: "#18181b", 
+  foreground: "#f4f4f5", 
+  card: "#27272a",       
+  cardForeground: "#f4f4f5", 
+  primary: "#3b82f6",    
+  primaryForeground: "#18181b", 
+  secondary: "#27272a",  
+  secondaryForeground: "#f4f4f5", 
+  muted: "#27272a",      
+  mutedForeground: "#a1a1aa", 
+  border: "#3f3f46",     
+  pedestalGlow: "#3b82f6",    
+  pedestalTop: "#3f3f46",     
+  pedestalTopBorder: "#3b82f6", 
+  pedestalBody: "#27272a",    
+  pedestalShadow: "#000000",  
 }
 
-interface CustomPaletteContextValue {
-  customColors: CustomColors
-  setCustomColor: (key: keyof CustomColors, value: string) => void
-  applyBulkColors: (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
-  resetCustomColors: () => void
-  swapColors: (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
-  customRadius: number | null
-  setCustomRadius: (radius: number | null) => void
-
-  lockedColors: Partial<Record<keyof CustomColors, boolean>>
-  toggleLock: (key: keyof CustomColors) => void
-  setLockedColors: (locks: Partial<Record<keyof CustomColors, boolean>>) => void
-
-  undo: () => void
-  redo: () => void
-  canUndo: boolean
-  canRedo: boolean
-}
-
-export const CustomPaletteContext = createContext<CustomPaletteContextValue | null>(null)
+import { CustomPaletteContext } from "@/components/providers/custom-palette-provider"
 
 const STORAGE_KEY = "custom-palette-colors"
 const RADIUS_STORAGE_KEY = "custom-palette-radius"
 
-export function CustomPaletteProvider({ children }: { children: React.ReactNode }) {
-  const { theme } = useTheme()
+export function StandaloneProvider({ 
+  children,
+  targetElement = () => document.documentElement
+}: { 
+  children: React.ReactNode,
+  targetElement?: () => HTMLElement 
+}) {
   const [customColors, setCustomColors] = useState<CustomColors>(DEFAULT_CUSTOM_COLORS)
   const [customRadius, setCustomRadiusState] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -89,7 +75,6 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   const lastPushTime = useRef<number>(0)
 
   // Hydrate custom colors
-  // Load from localStorage on mount
   useEffect(() => {
     setMounted(true)
     try {
@@ -106,6 +91,45 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
     }
   }, [])
 
+  // Apply CSS Variables to host document
+  useEffect(() => {
+    if (!mounted) return
+    const el = targetElement()
+    if (!el) return
+
+    const style = el.style
+    style.setProperty('--background', customColors.background)
+    style.setProperty('--foreground', customColors.foreground)
+    style.setProperty('--card', customColors.card)
+    style.setProperty('--card-foreground', customColors.cardForeground)
+    style.setProperty('--popover', customColors.card)
+    style.setProperty('--popover-foreground', customColors.foreground)
+    style.setProperty('--primary', customColors.primary)
+    style.setProperty('--primary-foreground', customColors.primaryForeground)
+    style.setProperty('--secondary', customColors.secondary)
+    style.setProperty('--secondary-foreground', customColors.secondaryForeground)
+    style.setProperty('--muted', customColors.muted)
+    style.setProperty('--muted-foreground', customColors.mutedForeground)
+    style.setProperty('--accent', customColors.primary)
+    style.setProperty('--accent-foreground', customColors.primaryForeground)
+    style.setProperty('--border', customColors.border)
+    style.setProperty('--input', customColors.border)
+    style.setProperty('--ring', customColors.primary)
+    
+    style.setProperty('--pedestal-glow', customColors.pedestalGlow)
+    style.setProperty('--pedestal-top', customColors.pedestalTop)
+    style.setProperty('--pedestal-top-border', customColors.pedestalTopBorder)
+    style.setProperty('--pedestal-body', customColors.pedestalBody)
+    style.setProperty('--pedestal-shadow', customColors.pedestalShadow)
+    
+    if (customRadius !== null) {
+      style.setProperty('--radius', `${customRadius}rem`)
+    } else {
+      style.removeProperty('--radius')
+    }
+  }, [customColors, customRadius, mounted, targetElement])
+
+
   const setCustomRadius = (radius: number | null) => {
     setCustomRadiusState(radius)
     if (radius === null) {
@@ -118,12 +142,10 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   const pushToHistory = (stateToPush: CustomColors) => {
     setHistory((prev) => {
       const nextHistory = [...prev, stateToPush]
-      if (nextHistory.length > 50) {
-        return nextHistory.slice(1) // Cap at 50
-      }
+      if (nextHistory.length > 50) return nextHistory.slice(1)
       return nextHistory
     })
-    setFuture([]) // Clear future stack on new actions
+    setFuture([])
   }
 
   const undo = () => {
@@ -133,9 +155,7 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
 
     setFuture((prev) => {
       const nextFuture = [...prev, currentColors]
-      if (nextFuture.length > 50) {
-        return nextFuture.slice(1)
-      }
+      if (nextFuture.length > 50) return nextFuture.slice(1)
       return nextFuture
     })
 
@@ -154,9 +174,7 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
 
     setHistory((prev) => {
       const nextHistory = [...prev, currentColors]
-      if (nextHistory.length > 50) {
-        return nextHistory.slice(1)
-      }
+      if (nextHistory.length > 50) return nextHistory.slice(1)
       return nextHistory
     })
 
@@ -216,7 +234,6 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       trySet("pedestalBody", colors[14], lockedColors?.pedestalBody)
       trySet("pedestalShadow", colors[15], lockedColors?.pedestalShadow)
 
-      // Legibility Safety Net
       const MIN_RATIO = 2.5;
       let wasModified = false;
       const enforce = (bgKey: keyof CustomColors, fgKey: keyof CustomColors) => {
@@ -238,7 +255,6 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
       if (!hasChanges && !wasModified) return prev
 
       if (wasModified) {
-        // Dispatch a custom event so the UI can notify the user
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("palette-auto-fixed"));
         }
@@ -279,10 +295,8 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
     })
   }
 
-  // Generate the CSS string dynamically based on the current custom colors.
-  // We use standard hex colors, so they don't need oklch conversions, but they just map directly.
   const customCss = `
-    [data-theme="custom-palette"] {
+    :host {
       --background: ${customColors.background};
       --foreground: ${customColors.foreground};
       --card: ${customColors.card};
@@ -329,8 +343,7 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
         canRedo: future.length > 0
       }}
     >
-      {/* Inject styles unconditionally, they are scoped to [data-theme="custom-palette"] anyway */}
-      {mounted && theme === "custom-palette" && (
+      {mounted && (
         <style dangerouslySetInnerHTML={{ __html: customCss }} />
       )}
       {children}
@@ -338,10 +351,4 @@ export function CustomPaletteProvider({ children }: { children: React.ReactNode 
   )
 }
 
-export function useCustomPalette() {
-  const ctx = useContext(CustomPaletteContext)
-  if (!ctx) {
-    throw new Error("useCustomPalette must be used within a CustomPaletteProvider")
-  }
-  return ctx
-}
+
