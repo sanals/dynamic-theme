@@ -821,16 +821,41 @@ This widget has **massive potential** as a standalone product. The technical cha
 
 ---
 
+## 16. Universal Website Compatibility Strategies
+
+Currently, the widget relies on the host website utilizing specific CSS variables (e.g., `--background`, `--primary`). If we want to make the widget compatible with *any* arbitrary website (like standard WordPress themes, legacy sites, or sites that hardcode colors), we have three main architectural options:
+
+### Option 1: The 'CSS Variable Mapper' (Easiest, Safest)
+**How it works:** We add a configuration panel in the widget where the user maps our variables to *their* variables.
+- Example: The user tells the widget, "My website's primary color is stored in `--brand-color-1`."
+- The widget then generates its palettes and updates `--brand-color-1` instead of `--primary`.
+**Pros:** Easy to build, extremely safe, doesn't break websites.
+**Cons:** Still requires the target website to use CSS variables somewhere in its architecture.
+
+### Option 2: The 'CSSOM Auto-Themer' (High complexity, Dark Reader style)
+**How it works:** When the widget loads, it scans the entire CSS Object Model (CSSOM) of the website, looking for hardcoded colors (e.g., `background-color: #ffffff;`). It then dynamically rewrites those stylesheets to inherit our CSS variables.
+**Pros:** Works on literally any website instantly without the developer doing any setup.
+**Cons:** Extremely difficult to build reliably. It can accidentally overwrite borders, text colors, or break complex layouts. It requires parsing thousands of lines of CSS in real-time.
+
+### Option 3: The 'Global Style Forcer' (Medium complexity, Brute-force)
+**How it works:** The widget injects a massive `<style>` block at the bottom of the page that uses high-specificity selectors to force colors on generic tags.
+- Example: `body, div, section { background-color: var(--background) !important; color: var(--foreground) !important; }`
+- Example: `button, .btn { background-color: var(--primary) !important; }`
+**Pros:** Works on most sites, relatively easy to implement.
+**Cons:** Can destroy the aesthetic of complex websites because it overrides everything with a broad brush.
+
+---
+
 ## Conclusion
 
 The standalone theme widget represents a **unique opportunity** in the design tools market. No existing solution offers live, on-site theme customization with the depth of features you've already built.
 
 Your competitive advantages:
-1. ✅ Working prototype (80% done)
-2. ✅ Advanced features (AI, WCAG, comparison mode)
-3. ✅ Clear market need (validated by existing tools' limitations)
-4. ✅ Multiple monetization paths
-5. ✅ Scalable architecture
+1. 🔥 Working prototype (80% done)
+2. 🔥 Advanced features (AI, WCAG, comparison mode)
+3. 🔥 Clear market need (validated by existing tools' limitations)
+4. 🔥 Multiple monetization paths
+5. 🔥 Scalable architecture
 
 The path from current state to profitable product is clear and achievable. The main risk is execution, not market viability.
 
@@ -840,4 +865,4 @@ The path from current state to profitable product is clear and achievable. The m
 
 *Document created: 2026-06-18*
 *Last updated: 2026-06-18*
-*Version: 1.0*
+*Version: 1.1*
