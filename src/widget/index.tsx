@@ -1,11 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { ThemeProvider } from 'next-themes';
-import { DesignProvider } from '@/components/providers/design-provider';
-import { FontProvider } from '@/components/providers/font-provider';
-import { ComparisonProvider } from '@/components/providers/comparison-provider';
-import { StandaloneProvider } from './StandaloneProvider';
+import { FontProvider } from './font-provider';
+import { ComparisonProvider } from './comparison-provider';
+import { WidgetStateProvider } from './WidgetStateProvider';
 
 import { GlobalDesignWidget } from '@/components/global-design-widget';
 
@@ -36,20 +34,15 @@ class ThemeWidgetElement extends HTMLElement {
     root.render(
       <React.StrictMode>
         {/* We use our Shimmed ThemeProvider so the widget compiles, but it doesn't affect the host */}
-        <ThemeProvider>
-          {/* We use our custom StandaloneProvider to handle custom colors and inject them into the host */}
-          <StandaloneProvider targetElement={targetElement}>
-            <DesignProvider>
-              <FontProvider>
-                <ComparisonProvider>
-                  <div className="antialiased">
-                    <GlobalDesignWidget isStandalone={true} />
-                  </div>
-                </ComparisonProvider>
-              </FontProvider>
-            </DesignProvider>
-          </StandaloneProvider>
-        </ThemeProvider>
+        <WidgetStateProvider targetElement={targetElement}>
+          <FontProvider>
+            <ComparisonProvider>
+              <div className="antialiased">
+                <GlobalDesignWidget isStandalone={true} />
+              </div>
+            </ComparisonProvider>
+          </FontProvider>
+        </WidgetStateProvider>
       </React.StrictMode>
     );
   }

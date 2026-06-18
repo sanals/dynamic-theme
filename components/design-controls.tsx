@@ -1,6 +1,5 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
 import { Frame, Palette, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 } from "lucide-react"
@@ -10,14 +9,13 @@ import {
   type DesignId,
   type ColorPalette,
 } from "@/lib/design-config"
-import { useDesign } from "@/components/providers/design-provider"
-import { useFont } from "@/components/providers/font-provider"
+import { useFont } from "@/src/widget/font-provider"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
-import { useCustomPalette, type CustomColors } from "@/components/providers/custom-palette-provider"
+import { useCustomPalette, type CustomColors } from "@/src/widget/WidgetStateProvider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
 import { getContrastInfo, extractDominantColor, autoFixContrast, getRelativeLuminance, getContrastRatio } from "@/lib/color-utils"
-import { useComparison, type Snapshot } from "@/components/providers/comparison-provider"
+import { useComparison, type Snapshot } from "@/src/widget/comparison-provider"
 import { toPng } from "html-to-image"
 import { POPULAR_GOOGLE_FONTS } from "@/lib/popular-fonts"
 
@@ -400,37 +398,29 @@ export function DesignControls({
   onMinimize?: () => void
   isStandalone?: boolean
 }) {
-  const { theme, setTheme: _setTheme } = useTheme()
-  const { activeDesign, setDesign: _setDesign } = useDesign()
-  const { activeFont, setFont, setCustomFont, customFontName, dynamicGoogleFontName, setDynamicGoogleFont } = useFont()
-
-  // View Transition Wrappers
-  const setTheme = (newTheme: string) => {
-    if (!document.startViewTransition) return _setTheme(newTheme)
-    document.startViewTransition(() => flushSync(() => _setTheme(newTheme)))
-  }
-
-
-  const setDesign = (newDesign: DesignId) => {
-    if (!document.startViewTransition) return _setDesign(newDesign)
-    document.startViewTransition(() => flushSync(() => _setDesign(newDesign)))
-  }
   const {
+    mode,
+    setMode,
     customColors,
     setCustomColor,
     applyBulkColors,
-    resetCustomColors,
     swapColors,
-    customRadius,
-    setCustomRadius,
     lockedColors,
     toggleLock,
-    setLockedColors,
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    customRadius,
+    setCustomRadius
   } = useCustomPalette()
+  
+  const { activeFont, setFont, setCustomFont, customFontName, dynamicGoogleFontName, setDynamicGoogleFont } = useFont()
+  
+  const theme = mode === "custom" ? "custom-palette" : "default"
+  const setTheme = () => {}
+  const activeDesign = "gallery" as any
+  const setDesign = () => {}
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -1158,21 +1148,17 @@ export function DesignControls({
           />
         )}
         <Segmented<"default" | "custom">
-          label="Palette"
-          icon={<Palette className="size-3.5" aria-hidden />}
-          options={[
-            { id: "default", label: "Default" },
-            { id: "custom", label: "Custom" },
-          ]}
-          value={mounted ? (theme === "custom-palette" ? "custom" : "default") : undefined}
-          onChange={(val) => {
-            if (val === "custom") {
-              setTheme("custom-palette")
-            } else {
-              setTheme(lastDefaultPalettes[activeDesign])
-            }
-          }}
-        />
+            label="Palette"
+            icon={<Palette className="size-3.5" aria-hidden />}
+            options={[
+              { id: "default", label: "Default" },
+              { id: "custom", label: "Custom" },
+            ]}
+            value={mounted ? mode : undefined}
+            onChange={(val) => {
+              setMode(val as "default" | "custom")
+            }}
+          />
 
         {mounted && (
           <div className="flex items-center gap-1 ml-1 pl-3 border-l border-white/20 h-7">
