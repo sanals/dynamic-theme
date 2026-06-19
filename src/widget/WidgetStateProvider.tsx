@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef } from "react"
 import { autoFixContrast } from "@/lib/color-utils"
+import { Engines } from "./engines"
 
 // Reuse the exact same CustomColors type from the main app
 export type CustomColors = {
@@ -43,8 +44,10 @@ const DEFAULT_CUSTOM_COLORS: CustomColors = {
 }
 
 export interface CustomPaletteContextValue {
-  mode: "default" | "custom"
-  setMode: (mode: "default" | "custom") => void
+  mode: "default" | "custom" | "mapper"
+  setMode: (mode: "default" | "custom" | "mapper") => void
+  mapperMappings: Record<string, string>
+  setMapperMappings: (mappings: Record<string, string>) => void
   customColors: CustomColors
   setCustomColor: (key: keyof CustomColors, value: string) => void
   applyBulkColors: (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
@@ -82,7 +85,8 @@ export function WidgetStateProvider({
   children: React.ReactNode,
   targetElement?: () => HTMLElement 
 }) {
-  const [mode, setModeState] = useState<"default" | "custom">("default")
+  const [mode, setModeState] = useState<"default" | "custom" | "mapper">("default")
+  const [mapperMappings, setMapperMappingsState] = useState<Record<string, string>>({})
   const [customColors, setCustomColors] = useState<CustomColors>(DEFAULT_CUSTOM_COLORS)
   const [customRadius, setCustomRadiusState] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -103,18 +107,27 @@ export function WidgetStateProvider({
   const lastEditedKey = useRef<keyof CustomColors | null>(null)
   const lastPushTime = useRef<number>(0)
 
-  const setMode = (m: "default" | "custom") => {
+  const setMode = (m: "default" | "custom" | "mapper") => {
     setModeState(m)
     window.localStorage.setItem(MODE_STORAGE_KEY, m)
+  }
+
+  const setMapperMappings = (m: Record<string, string>) => {
+    setMapperMappingsState(m)
+    window.localStorage.setItem("widget-mapper-mappings", JSON.stringify(m))
   }
 
   // Hydrate custom colors and mode
   useEffect(() => {
     setMounted(true)
     try {
-      const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as "default" | "custom" | null
+      const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as "default" | "custom" | "mapper" | null
       if (storedMode) {
         setModeState(storedMode)
+      }
+      const storedMappings = window.localStorage.getItem("widget-mapper-mappings")
+      if (storedMappings) {
+        setMapperMappingsState(JSON.parse(storedMappings))
       }
       const stored = window.localStorage.getItem(STORAGE_KEY)
       if (stored) {
@@ -129,74 +142,24 @@ export function WidgetStateProvider({
     }
   }, [])
 
-  // Apply CSS Variables to host document
+  // Apply CSS Variables to host document using Engines
   useEffect(() => {
     if (!mounted) return
     const el = targetElement()
     if (!el) return
 
-    const style = el.style
-    
+    // Cleanup ALL engines first to prevent variable pollution across modes
+    Object.values(Engines).forEach(engine => engine.cleanup(el, { mapperMappings }))
+
     if (mode === "default") {
-      // Remove all injected styles so the host defaults take over
-      style.removeProperty('--background')
-      style.removeProperty('--foreground')
-      style.removeProperty('--card')
-      style.removeProperty('--card-foreground')
-      style.removeProperty('--popover')
-      style.removeProperty('--popover-foreground')
-      style.removeProperty('--primary')
-      style.removeProperty('--primary-foreground')
-      style.removeProperty('--secondary')
-      style.removeProperty('--secondary-foreground')
-      style.removeProperty('--muted')
-      style.removeProperty('--muted-foreground')
-      style.removeProperty('--accent')
-      style.removeProperty('--accent-foreground')
-      style.removeProperty('--border')
-      style.removeProperty('--input')
-      style.removeProperty('--ring')
-      
-      style.removeProperty('--pedestal-glow')
-      style.removeProperty('--pedestal-top')
-      style.removeProperty('--pedestal-top-border')
-      style.removeProperty('--pedestal-body')
-      style.removeProperty('--pedestal-shadow')
-      
-      style.removeProperty('--radius')
       return
     }
 
-    style.setProperty('--background', customColors.background)
-    style.setProperty('--foreground', customColors.foreground)
-    style.setProperty('--card', customColors.card)
-    style.setProperty('--card-foreground', customColors.cardForeground)
-    style.setProperty('--popover', customColors.card)
-    style.setProperty('--popover-foreground', customColors.foreground)
-    style.setProperty('--primary', customColors.primary)
-    style.setProperty('--primary-foreground', customColors.primaryForeground)
-    style.setProperty('--secondary', customColors.secondary)
-    style.setProperty('--secondary-foreground', customColors.secondaryForeground)
-    style.setProperty('--muted', customColors.muted)
-    style.setProperty('--muted-foreground', customColors.mutedForeground)
-    style.setProperty('--accent', customColors.primary)
-    style.setProperty('--accent-foreground', customColors.primaryForeground)
-    style.setProperty('--border', customColors.border)
-    style.setProperty('--input', customColors.border)
-    style.setProperty('--ring', customColors.primary)
-    
-    style.setProperty('--pedestal-glow', customColors.pedestalGlow)
-    style.setProperty('--pedestal-top', customColors.pedestalTop)
-    style.setProperty('--pedestal-top-border', customColors.pedestalTopBorder)
-    style.setProperty('--pedestal-body', customColors.pedestalBody)
-    style.setProperty('--pedestal-shadow', customColors.pedestalShadow)
-    
-    if (customRadius !== null) {
-      style.setProperty('--radius', `${customRadius}rem`)
-    } else {
-      style.removeProperty('--radius')
+    const activeEngine = Engines[mode]
+    if (activeEngine) {
+      activeEngine.apply(customColors, customRadius, el, { mapperMappings })
     }
-  }, [customColors, customRadius, mounted, targetElement, mode])
+  }, [customColors, customRadius, mounted, targetElement, mode, mapperMappings])
 
 
   const setCustomRadius = (radius: number | null) => {
@@ -398,6 +361,8 @@ export function WidgetStateProvider({
       value={{
         mode,
         setMode,
+        mapperMappings,
+        setMapperMappings,
         customColors,
         setCustomColor,
         applyBulkColors,

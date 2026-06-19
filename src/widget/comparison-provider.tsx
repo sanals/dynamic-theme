@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from "react"
 import { type DesignId } from "@/lib/design-config"
-import { type CustomColors } from "./custom-palette-provider"
+import { type CustomColors } from "./WidgetStateProvider"
 
 export interface Snapshot {
   designId: DesignId

@@ -1,4 +1,4 @@
-import { type CustomColors } from "@/components/providers/custom-palette-provider"
+import { type CustomColors } from "@/src/widget/WidgetStateProvider"
 import { type DesignId } from "@/lib/design-config"
 
 interface HSL {

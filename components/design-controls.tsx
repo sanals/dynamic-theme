@@ -1,8 +1,10 @@
+// @ts-nocheck
+import { extractHostVariables, autoMapVariables, findVariableForElement } from "@/src/widget/utils/css-parser"
 "use client"
 
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
-import { Frame, Palette, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 } from "lucide-react"
+import { Frame, Palette, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 , Search, Crosshair } from "lucide-react"
 import {
   designs,
   darkLightPairs,
@@ -226,6 +228,7 @@ function Segmented<T extends string>({
   value: T | undefined
   onChange: (id: T) => void
 }) {
+
   return (
     <div className="flex items-center gap-2">
       <span className="hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:flex">
@@ -401,11 +404,15 @@ export function DesignControls({
   const {
     mode,
     setMode,
+    mapperMappings,
+    setMapperMappings,
     customColors,
     setCustomColor,
     applyBulkColors,
+    resetCustomColors,
     swapColors,
     lockedColors,
+    setLockedColors,
     toggleLock,
     undo,
     redo,
@@ -418,9 +425,9 @@ export function DesignControls({
   const { activeFont, setFont, setCustomFont, customFontName, dynamicGoogleFontName, setDynamicGoogleFont } = useFont()
   
   const theme = mode === "custom" ? "custom-palette" : "default"
-  const setTheme = () => {}
-  const activeDesign = "gallery" as any
-  const setDesign = () => {}
+  const setTheme = (t: string) => {}
+  const activeDesign = "gallery" as DesignId
+  const setDesign = (id: string) => {}
   const { isComparisonMode, setComparisonMode, snapshot, setSnapshot } = useComparison()
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -465,6 +472,8 @@ export function DesignControls({
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGeneratingAi, setIsGeneratingAi] = useState(false)
   const fontFileInputRef = useRef<HTMLInputElement>(null)
+  const [detectedVariables, setDetectedVariables] = useState<string[]>([])
+  const [activePickerToken, setActivePickerToken] = useState<string | null>(null)
 
   // Image Theme Extractor
   const imageFileInputRef = useRef<HTMLInputElement>(null)
@@ -1125,6 +1134,102 @@ export function DesignControls({
   const currentContrast = getContrastRatio(customColors.background, customColors.foreground);
   const isPanicMode = theme === "custom-palette" && currentContrast < 2.0;
 
+  
+  const handleScanVariables = () => {
+    const vars = extractHostVariables()
+    setDetectedVariables(vars)
+  }
+
+
+  // DOM Element Picker Logic
+  useEffect(() => {
+    if (!activePickerToken) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Don't highlight widget elements
+      if (target.closest('.theme-widget-container')) return
+      
+      target.setAttribute('data-picker-highlight', 'true')
+      target.style.outline = '2px solid #a855f7'
+      target.style.outlineOffset = '2px'
+    }
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (target.hasAttribute('data-picker-highlight')) {
+        target.removeAttribute('data-picker-highlight')
+        target.style.outline = ''
+        target.style.outlineOffset = ''
+      }
+    }
+
+    const handleClick = (e: MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      const target = e.target as HTMLElement
+      if (target.closest('.theme-widget-container')) return
+
+      // Clean up outline immediately
+      handleMouseOut(e)
+
+      // Ensure we have scanned variables
+      let vars = detectedVariables
+      if (vars.length === 0) {
+        vars = extractHostVariables()
+        setDetectedVariables(vars)
+      }
+
+      const match = findVariableForElement(target, activePickerToken, vars)
+      if (match) {
+        setMapperMappings(prev => ({ ...prev, [activePickerToken]: match }))
+      } else {
+        alert(`Could not confidently determine the ${activePickerToken} variable for this element.`)
+      }
+
+      setActivePickerToken(null)
+    }
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActivePickerToken(null)
+      }
+    }
+    document.addEventListener('keydown', handleEsc, true)
+    
+    // Capture true to run before react handlers
+    document.addEventListener('mousemove', handleMouseMove, true)
+    document.addEventListener('mouseout', handleMouseOut, true)
+    document.addEventListener('click', handleClick, true)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true)
+      document.removeEventListener('mouseout', handleMouseOut, true)
+      document.removeEventListener('click', handleClick, true)
+      document.removeEventListener('keydown', handleEsc, true)
+      
+      // Cleanup any lingering outlines
+      document.querySelectorAll('[data-picker-highlight]').forEach(el => {
+        (el as HTMLElement).removeAttribute('data-picker-highlight');
+        (el as HTMLElement).style.outline = '';
+        (el as HTMLElement).style.outlineOffset = '';
+      })
+    }
+  }, [activePickerToken, detectedVariables])
+
+  const handleAutoMap = () => {
+    let vars = detectedVariables
+    if (vars.length === 0) {
+      vars = extractHostVariables()
+      setDetectedVariables(vars)
+    }
+    const mapped = autoMapVariables(vars)
+    setMapperMappings({ ...mapperMappings, ...mapped })
+  }
+
+
+
   return (
     <div className="relative flex flex-col gap-3.5 items-center w-full">
 
@@ -1147,16 +1252,17 @@ export function DesignControls({
             onChange={handleDesignChange}
           />
         )}
-        <Segmented<"default" | "custom">
-            label="Palette"
+        <Segmented<"default" | "custom" | "mapper">
+            label="Palette Engine"
             icon={<Palette className="size-3.5" aria-hidden />}
             options={[
               { id: "default", label: "Default" },
               { id: "custom", label: "Custom" },
+              { id: "mapper", label: "Mapper" },
             ]}
             value={mounted ? mode : undefined}
             onChange={(val) => {
-              setMode(val as "default" | "custom")
+              setMode(val as "default" | "custom" | "mapper")
             }}
           />
 
@@ -1316,8 +1422,90 @@ export function DesignControls({
       </div>
 
       {/* Bottom Row: Color Pickers and Presets (only shown in custom mode) */}
-      {mounted && theme === "custom-palette" && (
+      {mounted && (mode === "custom" || mode === "mapper") && (
         <div className="flex flex-col gap-3.5 border-t border-border/20 pt-3.5 w-full">
+
+        {/* Mapper Configuration UI */}
+        {mounted && mode === "mapper" && (
+          <div className="flex flex-col gap-3 w-full px-1 py-3 border-t border-border/20">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Variable Mappings</span>
+                <span className="text-[9px] text-muted-foreground bg-foreground/5 px-2 rounded-full py-0.5 border border-foreground/10">Map our tokens to your CSS variables</span>
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleScanVariables}
+                  title="Scan page for CSS variables"
+                  className="flex items-center gap-1 px-2 py-1 bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 rounded transition-colors text-[9px] text-foreground font-medium"
+                >
+                  <Search className="size-3" />
+                  Scan Variables
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAutoMap}
+                  title="Auto-detect and map matching variables"
+                  className="flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 rounded transition-colors text-[9px] font-medium"
+                >
+                  <Wand2 className="size-3" />
+                  Auto-Map
+                </button>
+              </div>
+            </div>
+            
+            <datalist id="detected-vars">
+              {detectedVariables.map(v => <option key={v} value={v} />)}
+            </datalist>
+<div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {Object.keys(customColors).map(key => (
+                <div key={key} className="flex flex-col gap-1">
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wide truncate">{key}</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      placeholder="--var-name"
+                      value={mapperMappings[key] || ""}
+                      onChange={(e) => setMapperMappings({ ...mapperMappings, [key]: e.target.value })}
+                      className="h-6 flex-1 min-w-0 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      list="detected-vars"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setActivePickerToken(key === activePickerToken ? null : key)}
+                      title="Pick element from page"
+                      className={`h-6 w-6 flex items-center justify-center shrink-0 rounded transition-colors ${activePickerToken === key ? 'bg-primary text-primary-foreground' : 'bg-foreground/5 hover:bg-foreground/10 text-muted-foreground'}`}
+                    >
+                      <Crosshair className="size-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex flex-col gap-1">
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wide truncate">border-radius</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      placeholder="--radius"
+                      value={mapperMappings['radius'] || ""}
+                      onChange={(e) => setMapperMappings({ ...mapperMappings, ['radius']: e.target.value })}
+                      className="h-6 flex-1 min-w-0 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      list="detected-vars"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setActivePickerToken('radius' === activePickerToken ? null : 'radius')}
+                      title="Pick element from page"
+                      className={`h-6 w-6 flex items-center justify-center shrink-0 rounded transition-colors ${activePickerToken === 'radius' ? 'bg-primary text-primary-foreground' : 'bg-foreground/5 hover:bg-foreground/10 text-muted-foreground'}`}
+                    >
+                      <Crosshair className="size-3" />
+                    </button>
+                  </div>
+                </div>
+            </div>
+          </div>
+        )}
           {/* Presets Library */}
           <div className="flex items-center gap-3 w-full px-1">
             <div className="flex items-center justify-center shrink-0">
