@@ -574,7 +574,9 @@ export function DesignControls({
   const [activeHexColors, setActiveHexColors] = useState<CustomColors>(customColors)
 
   useEffect(() => {
-    if (theme === "custom-palette") {
+    if (mode !== "default") {
+      setActiveHexColors(customColors)
+    } else if (theme === "custom-palette") {
       setActiveHexColors(customColors)
     } else {
       const timer = setTimeout(() => {
@@ -583,7 +585,7 @@ export function DesignControls({
       return () => clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, activeDesign, customColors])
+  }, [theme, activeDesign, customColors, mode])
 
   // next-themes only knows the resolved theme on the client.
   useEffect(() => setMounted(true), [])
@@ -823,7 +825,7 @@ export function DesignControls({
   }
 
   const handleAutoFixWcag = () => {
-    if (theme !== "custom-palette") return
+    if (mode === "default") return
 
     const bg = customColors.background || "#000000"
     const newFg = autoFixContrast(bg, customColors.foreground || "#ffffff", 4.5)
@@ -1132,12 +1134,31 @@ export function DesignControls({
   }
 
   const currentContrast = getContrastRatio(customColors.background, customColors.foreground);
-  const isPanicMode = theme === "custom-palette" && currentContrast < 2.0;
+  const isPanicMode = mode !== "default" && currentContrast < 2.0;
 
-  
+  const [varsCopied, setVarsCopied] = useState(false)
+
   const handleScanVariables = () => {
     const vars = extractHostVariables()
     setDetectedVariables(vars)
+  }
+
+  const handleCopyVariables = () => {
+    let vars = detectedVariables
+    if (vars.length === 0) {
+      vars = extractHostVariables()
+      setDetectedVariables(vars)
+    }
+    const rootStyle = window.getComputedStyle(document.documentElement)
+    const lines = vars.map(v => {
+      const resolved = rootStyle.getPropertyValue(v).trim()
+      return `${v}: ${resolved || '(unresolved)'}`
+    })
+    const text = `--- CSS Variables (${vars.length}) ---\n${lines.join('\n')}`
+    navigator.clipboard.writeText(text).then(() => {
+      setVarsCopied(true)
+      setTimeout(() => setVarsCopied(false), 2000)
+    })
   }
 
 
@@ -1252,17 +1273,19 @@ export function DesignControls({
             onChange={handleDesignChange}
           />
         )}
-        <Segmented<"default" | "custom" | "mapper">
+        <Segmented<"default" | "custom" | "mapper" | "cssom" | "forcer">
             label="Palette Engine"
             icon={<Palette className="size-3.5" aria-hidden />}
             options={[
               { id: "default", label: "Default" },
               { id: "custom", label: "Custom" },
               { id: "mapper", label: "Mapper" },
+              { id: "cssom", label: "Smart" },
+              { id: "forcer", label: "Override" },
             ]}
             value={mounted ? mode : undefined}
             onChange={(val) => {
-              setMode(val as "default" | "custom" | "mapper")
+              setMode(val as "default" | "custom" | "mapper" | "cssom" | "forcer")
             }}
           />
 
@@ -1422,7 +1445,7 @@ export function DesignControls({
       </div>
 
       {/* Bottom Row: Color Pickers and Presets (only shown in custom mode) */}
-      {mounted && (mode === "custom" || mode === "mapper") && (
+      {mounted && mode !== "default" && (
         <div className="flex flex-col gap-3.5 border-t border-border/20 pt-3.5 w-full">
 
         {/* Mapper Configuration UI */}
@@ -1442,6 +1465,20 @@ export function DesignControls({
                 >
                   <Search className="size-3" />
                   Scan Variables
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyVariables}
+                  title="Copy all detected CSS variables to clipboard"
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 border rounded transition-colors text-[9px] font-medium",
+                    varsCopied
+                      ? "bg-green-500/20 text-green-400 border-green-500/30"
+                      : "bg-foreground/5 hover:bg-foreground/10 border-foreground/10 text-foreground"
+                  )}
+                >
+                  {varsCopied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                  {varsCopied ? "Copied!" : "Copy Vars"}
                 </button>
                 <button
                   type="button"
@@ -2056,7 +2093,7 @@ export function DesignControls({
                 </span>
               )}
             </div>
-            {theme === "custom-palette" && (
+            {mode !== "default" && (
               <button
                 type="button"
                 onClick={handleAutoFixWcag}
@@ -2158,7 +2195,7 @@ export function DesignControls({
                           {info.level}
                         </span>
 
-                        {theme === "custom-palette" && info.level !== "AAA" && (
+                        {mode !== "default" && info.level !== "AAA" && (
                           <button
                             type="button"
                             onClick={() => {

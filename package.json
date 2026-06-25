@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
+    "build:ext": "vite build && copy dist\\theme-widget.js extension\\",
     "preview": "vite preview"
   },
   "dependencies": {

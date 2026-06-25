@@ -44,8 +44,8 @@ const DEFAULT_CUSTOM_COLORS: CustomColors = {
 }
 
 export interface CustomPaletteContextValue {
-  mode: "default" | "custom" | "mapper"
-  setMode: (mode: "default" | "custom" | "mapper") => void
+  mode: "default" | "custom" | "mapper" | "cssom" | "forcer"
+  setMode: (mode: "default" | "custom" | "mapper" | "cssom" | "forcer") => void
   mapperMappings: Record<string, string>
   setMapperMappings: (mappings: Record<string, string>) => void
   customColors: CustomColors
@@ -85,7 +85,7 @@ export function WidgetStateProvider({
   children: React.ReactNode,
   targetElement?: () => HTMLElement 
 }) {
-  const [mode, setModeState] = useState<"default" | "custom" | "mapper">("default")
+  const [mode, setModeState] = useState<"default" | "custom" | "mapper" | "cssom" | "forcer">("default")
   const [mapperMappings, setMapperMappingsState] = useState<Record<string, string>>({})
   const [customColors, setCustomColors] = useState<CustomColors>(DEFAULT_CUSTOM_COLORS)
   const [customRadius, setCustomRadiusState] = useState<number | null>(null)
@@ -107,7 +107,7 @@ export function WidgetStateProvider({
   const lastEditedKey = useRef<keyof CustomColors | null>(null)
   const lastPushTime = useRef<number>(0)
 
-  const setMode = (m: "default" | "custom" | "mapper") => {
+  const setMode = (m: "default" | "custom" | "mapper" | "cssom" | "forcer") => {
     setModeState(m)
     window.localStorage.setItem(MODE_STORAGE_KEY, m)
   }
@@ -121,7 +121,7 @@ export function WidgetStateProvider({
   useEffect(() => {
     setMounted(true)
     try {
-      const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as "default" | "custom" | "mapper" | null
+      const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as "default" | "custom" | "mapper" | "cssom" | "forcer" | null
       if (storedMode) {
         setModeState(storedMode)
       }

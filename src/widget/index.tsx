@@ -10,47 +10,47 @@ import { GlobalDesignWidget } from '@/components/global-design-widget';
 // The raw CSS string injected by Vite during build
 import styles from './styles.css?inline';
 
-class ThemeWidgetElement extends HTMLElement {
-  connectedCallback() {
-    // 1. Create the Shadow DOM
-    const shadow = this.attachShadow({ mode: 'open' });
+// We use a regular div with a ShadowRoot instead of a Custom Element.
+// This bypasses issues on sites like YouTube that have messy Web Component polyfills
+// and avoids errors in Chrome Extension Isolated Worlds where customElements might be null.
 
-    // 2. Inject Tailwind CSS
-    const styleTag = document.createElement('style');
-    styleTag.textContent = styles;
-    shadow.appendChild(styleTag);
+function createWidget(targetElement: () => HTMLElement) {
+  if (document.getElementById('vantage-theme-widget-container')) return;
 
-    // 3. Create the mount point for React
-    const mountPoint = document.createElement('div');
-    shadow.appendChild(mountPoint);
+  const container = document.createElement('div');
+  container.id = 'vantage-theme-widget-container';
+  
+  // 1. Create the Shadow DOM
+  const shadow = container.attachShadow({ mode: 'open' });
 
-    // Get the target element from the API (default to documentElement)
-    // The widget script will inject css variables to this element.
-    const targetElement = (window as any).ThemeWidget?._config?.targetElement || (() => document.documentElement);
+  // 2. Inject Tailwind CSS
+  const styleTag = document.createElement('style');
+  styleTag.textContent = styles;
+  shadow.appendChild(styleTag);
 
-    // 4. Render the Widget inside the Shadow DOM
-    const root = createRoot(mountPoint);
-    
-    root.render(
-      <React.StrictMode>
-        {/* We use our Shimmed ThemeProvider so the widget compiles, but it doesn't affect the host */}
-        <WidgetStateProvider targetElement={targetElement}>
-          <FontProvider>
-            <ComparisonProvider>
-              <div className="antialiased">
-                <GlobalDesignWidget isStandalone={true} />
-              </div>
-            </ComparisonProvider>
-          </FontProvider>
-        </WidgetStateProvider>
-      </React.StrictMode>
-    );
-  }
-}
+  // 3. Create the mount point for React
+  const mountPoint = document.createElement('div');
+  shadow.appendChild(mountPoint);
 
-// Register the web component
-if (!customElements.get('theme-widget')) {
-  customElements.define('theme-widget', ThemeWidgetElement);
+  // 4. Mount to page
+  document.body.appendChild(container);
+
+  // 5. Render the Widget inside the Shadow DOM
+  const root = createRoot(mountPoint);
+  
+  root.render(
+    <React.StrictMode>
+      <WidgetStateProvider targetElement={targetElement}>
+        <FontProvider>
+          <ComparisonProvider>
+            <div className="antialiased">
+              <GlobalDesignWidget isStandalone={true} />
+            </div>
+          </ComparisonProvider>
+        </FontProvider>
+      </WidgetStateProvider>
+    </React.StrictMode>
+  );
 }
 
 // Define the Vanilla JS API
@@ -58,11 +58,7 @@ if (!customElements.get('theme-widget')) {
   _config: {},
   init(config: { targetElement?: () => HTMLElement } = {}) {
     this._config = config;
-    
-    // Check if the component is already on the page
-    if (!document.querySelector('theme-widget')) {
-      const widget = document.createElement('theme-widget');
-      document.body.appendChild(widget);
-    }
+    const targetElement = config.targetElement || (() => document.documentElement);
+    createWidget(targetElement);
   }
 };

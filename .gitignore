@@ -14,3 +14,10 @@ node_modules
 .next/
 .DS_Store
 out
+
+# Build output
+dist/
+
+# Extension generated files
+extension
+

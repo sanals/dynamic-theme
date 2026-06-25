@@ -5,12 +5,12 @@ A standalone, injectable widget that provides an interactive UI to modify the vi
 ## 🚀 Getting Started
 
 ### 1. Build the Widget
-To generate the production-ready script, run:
+To generate the production-ready scripts (including the Chrome Extension), run:
 ```bash
 npm install
-npm run build
+npm run build:ext
 ```
-This will compile the widget into a single file located at: `dist/theme-widget.js`.
+This will compile the widget into a single file located at `dist/theme-widget.js`, and also generate a ready-to-use Chrome Extension in the `extension/` folder.
 
 ### 2. Add it to Your Project
 
@@ -67,8 +67,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-### 3. Live-injecting via Browser Console (Quick Test)
-If you want to quickly see the widget on any live website without modifying its source code:
+### 3. Testing via Chrome Extension (Recommended for Secure Sites)
+Some highly secure websites (like YouTube, LinkedIn, Pinterest) enforce strict Content Security Policies (CSP) or Trusted Types that block scripts injected via the console. To test the widget on these sites, use the bundled Chrome Extension:
+
+1. Open Chrome and navigate to `chrome://extensions/`.
+2. Toggle on **Developer mode** (top right corner).
+3. Click **Load unpacked** and select the `extension` folder in this project's directory.
+4. Pin the **Theme Widget Tester** extension to your toolbar.
+5. Navigate to any website and click the extension icon to instantly inject the widget, bypassing all CSP restrictions.
+
+### 4. Live-injecting via Browser Console (Quick Test)
+For sites without strict CSP:
 1. Serve the `dist` folder locally with CORS enabled: `npx serve dist -p 8080 -C`
 2. Open the target website in Chrome/Edge.
 3. Open Developer Tools (F12) -> **Console**.
@@ -86,10 +95,15 @@ script.onload = () => {
 
 ## 🛠 Features
 - **Real-time Palette Editing**: Adjust primary, secondary, background, and accent colors instantly.
+- **Multiple Injection Engines**:
+  - **Mapper**: Surgically map custom palette colors to specific CSS variables detected on the host website.
+  - **Smart (CSSOM)**: Auto-detects hardcoded colors in stylesheets and safely overrides them with your custom theme.
+  - **Override (Forcer)**: Aggressively overlays the custom theme using high-specificity rules to force compatibility on stubborn websites.
 - **Micro-interactions & Aesthetics**: Premium glassmorphism UI with smooth view transitions.
-- **WCAG Contrast Checker**: Built-in accessibility tool that warns you about poor color contrasts and offers a 1-click auto-fix to ensure maximum readability.
-- **Copy & Export**: Effortlessly copy generated color palettes to your clipboard as CSS variables or JSON.
-- **Shadow DOM Isolation**: The widget is completely sandboxed inside a Web Component (`<theme-widget>`), meaning it won't break your site's styles, and your site won't break the widget's styles.
+- **WCAG Contrast Checker**: Built-in accessibility tool that warns you about poor color contrasts and offers a 1-click auto-fix.
+- **Copy & Export**: Scan the page for CSS variables, copy them, and export generated palettes as CSS or JSON.
+- **Shadow DOM Isolation**: The widget is completely sandboxed inside a secure Shadow DOM, meaning it won't break your site's styles, and your site won't break the widget's styles.
 
 ## 📄 How it Works
-When initialized, `window.ThemeWidget.init()` injects the React-based widget into the page inside a Shadow DOM. As the user tweaks the design controls, the widget calculates the corresponding Tailwind-compatible CSS variables and injects them directly into the host page's `:root` (or a specified target element).
+When initialized, `window.ThemeWidget.init()` injects the React-based widget into the page inside a standard `<div>` with an attached Shadow DOM. This bypasses legacy Web Component polyfills (like those used on YouTube) while maintaining perfect CSS isolation. 
+As the user tweaks the design controls, the widget calculates the corresponding Tailwind-compatible CSS variables and injects them directly into the host page's `:root` (or dynamically rewrites stylesheets, depending on the active Engine Mode).
