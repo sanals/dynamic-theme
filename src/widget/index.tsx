@@ -14,6 +14,8 @@ import styles from './styles.css?inline';
 // This bypasses issues on sites like YouTube that have messy Web Component polyfills
 // and avoids errors in Chrome Extension Isolated Worlds where customElements might be null.
 
+let _reactRoot: any = null;
+
 function createWidget(targetElement: () => HTMLElement) {
   if (document.getElementById('vantage-theme-widget-container')) return;
 
@@ -37,6 +39,7 @@ function createWidget(targetElement: () => HTMLElement) {
 
   // 5. Render the Widget inside the Shadow DOM
   const root = createRoot(mountPoint);
+  _reactRoot = root;
   
   root.render(
     <React.StrictMode>
@@ -53,6 +56,17 @@ function createWidget(targetElement: () => HTMLElement) {
   );
 }
 
+function destroyWidget() {
+  const container = document.getElementById('vantage-theme-widget-container');
+  if (container) {
+    if (_reactRoot) {
+      _reactRoot.unmount();
+      _reactRoot = null;
+    }
+    container.remove();
+  }
+}
+
 // Define the Vanilla JS API
 (window as any).ThemeWidget = {
   _config: {},
@@ -60,5 +74,15 @@ function createWidget(targetElement: () => HTMLElement) {
     this._config = config;
     const targetElement = config.targetElement || (() => document.documentElement);
     createWidget(targetElement);
+  },
+  toggle(config: { targetElement?: () => HTMLElement } = {}) {
+    if (document.getElementById('vantage-theme-widget-container')) {
+      destroyWidget();
+    } else {
+      this.init(config);
+    }
+  },
+  destroy() {
+    destroyWidget();
   }
 };

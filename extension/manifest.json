@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Theme Widget Tester",
+  "version": "1.0.0",
+  "description": "Injects the Theme Widget into any page, bypassing CSP for testing.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_title": "Inject Widget"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "*://*/*"
+  ]
+}

@@ -1150,8 +1150,12 @@ export function DesignControls({
       setDetectedVariables(vars)
     }
     const rootStyle = window.getComputedStyle(document.documentElement)
+    const bodyStyle = window.getComputedStyle(document.body)
     const lines = vars.map(v => {
-      const resolved = rootStyle.getPropertyValue(v).trim()
+      let resolved = rootStyle.getPropertyValue(v).trim()
+      if (!resolved) {
+        resolved = bodyStyle.getPropertyValue(v).trim()
+      }
       return `${v}: ${resolved || '(unresolved)'}`
     })
     const text = `--- CSS Variables (${vars.length}) ---\n${lines.join('\n')}`
@@ -1273,19 +1277,19 @@ export function DesignControls({
             onChange={handleDesignChange}
           />
         )}
-        <Segmented<"default" | "custom" | "mapper" | "cssom" | "forcer">
+        <Segmented<"default" | "custom" | "mapper" | "thCtrl" | "stMgr">
             label="Palette Engine"
             icon={<Palette className="size-3.5" aria-hidden />}
             options={[
               { id: "default", label: "Default" },
               { id: "custom", label: "Custom" },
               { id: "mapper", label: "Mapper" },
-              { id: "cssom", label: "Smart" },
-              { id: "forcer", label: "Override" },
+              { id: "thCtrl", label: "Smart" },
+              { id: "stMgr", label: "Override" },
             ]}
             value={mounted ? mode : undefined}
             onChange={(val) => {
-              setMode(val as "default" | "custom" | "mapper" | "cssom" | "forcer")
+              setMode(val as "default" | "custom" | "mapper" | "thCtrl" | "stMgr")
             }}
           />
 

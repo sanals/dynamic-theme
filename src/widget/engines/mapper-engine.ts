@@ -1,10 +1,40 @@
 import { CustomColors } from "../WidgetStateProvider"
 import { InjectionEngine, EngineOptions } from "./types"
 
+const SITE_SPECIFIC_MAPPINGS: Record<string, Record<string, string>> = {
+  "en.wikipedia.org": {
+    "background": "--background-color-base",
+    "foreground": "--color-base",
+    "card": "--background-color-neutral",
+    "cardForeground": "--color-base",
+    "primary": "--color-progressive",
+    "primaryForeground": "--color-inverted",
+    "muted": "--background-color-neutral-subtle",
+    "mutedForeground": "--color-subtle",
+    "border": "--border-color-base",
+  },
+  "www.reddit.com": {
+    "background": "--dx-bg-color-light",
+    "foreground": "--dx-text-color-light",
+    "card": "--dx-bg-color-dark",
+    "cardForeground": "--dx-text-color-dark",
+    "primary": "--button-color-background-default",
+    "primaryForeground": "--button-color-text-default",
+    "border": "--dx-border-color-light",
+  }
+};
+
 export const MapperEngine: InjectionEngine = {
   apply: (colors: CustomColors, radius: number | null, targetElement: HTMLElement, options?: EngineOptions) => {
     const style = targetElement.style
-    const mappings = options?.mapperMappings || {}
+    let mappings = { ...(options?.mapperMappings || {}) }
+
+    try {
+      const hostname = window.location.hostname;
+      if (SITE_SPECIFIC_MAPPINGS[hostname]) {
+         mappings = { ...SITE_SPECIFIC_MAPPINGS[hostname], ...mappings }
+      }
+    } catch(e) {}
 
     // For every core widget color token, apply it to the user's mapped variable name (if provided)
     const tokens = [
@@ -47,7 +77,14 @@ export const MapperEngine: InjectionEngine = {
   },
   cleanup: (targetElement: HTMLElement, options?: EngineOptions) => {
     const style = targetElement.style
-    const mappings = options?.mapperMappings || {}
+    let mappings = { ...(options?.mapperMappings || {}) }
+
+    try {
+      const hostname = window.location.hostname;
+      if (SITE_SPECIFIC_MAPPINGS[hostname]) {
+         mappings = { ...SITE_SPECIFIC_MAPPINGS[hostname], ...mappings }
+      }
+    } catch(e) {}
     
     // Remove all custom mapped variables
     Object.values(mappings).forEach(mappedVarName => {

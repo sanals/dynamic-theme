@@ -1,7 +1,7 @@
 import { InjectionEngine, EngineOptions } from "./types";
 import { CustomColors } from "../WidgetStateProvider";
 
-const STYLE_ID = "theme-widget-cssom";
+const STYLE_ID = "theme-widget-th-ctrl";
 
 // Helper to determine if a color string is "dark" or "light"
 // This is a naive heuristic (checks for rgb/rgba/hex and estimates luminance)
@@ -30,7 +30,7 @@ function isDarkColor(colorStr: string): boolean {
   return false;
 }
 
-export const CssomEngine: InjectionEngine = {
+export const ThCtrlEngine: InjectionEngine = {
   apply: (colors: CustomColors, radius: number | null, targetElement: HTMLElement, options?: EngineOptions) => {
     let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement;
     if (!styleEl) {
@@ -44,17 +44,17 @@ export const CssomEngine: InjectionEngine = {
     // First, define our variables for the injected rules to use
     cssRulesToInject.push(`
       :root {
-        --widget-cssom-bg: ${colors.background};
-        --widget-cssom-fg: ${colors.foreground};
-        --widget-cssom-primary: ${colors.primary};
-        --widget-cssom-primary-fg: ${colors.primaryForeground};
-        --widget-cssom-secondary: ${colors.secondary};
-        --widget-cssom-secondary-fg: ${colors.secondaryForeground};
-        --widget-cssom-muted: ${colors.muted};
-        --widget-cssom-muted-fg: ${colors.mutedForeground};
-        --widget-cssom-border: ${colors.border};
-        --widget-cssom-card: ${colors.card};
-        --widget-cssom-card-fg: ${colors.cardForeground};
+        --widget-th-ctrl-bg: ${colors.background};
+        --widget-th-ctrl-fg: ${colors.foreground};
+        --widget-th-ctrl-primary: ${colors.primary};
+        --widget-th-ctrl-primary-fg: ${colors.primaryForeground};
+        --widget-th-ctrl-secondary: ${colors.secondary};
+        --widget-th-ctrl-secondary-fg: ${colors.secondaryForeground};
+        --widget-th-ctrl-muted: ${colors.muted};
+        --widget-th-ctrl-muted-fg: ${colors.mutedForeground};
+        --widget-th-ctrl-border: ${colors.border};
+        --widget-th-ctrl-card: ${colors.card};
+        --widget-th-ctrl-card-fg: ${colors.cardForeground};
       }
     `);
 
@@ -90,19 +90,19 @@ export const CssomEngine: InjectionEngine = {
             // Very simplistic mapping heuristic:
             // If original background was dark, map to our dark color (card/bg depending on theme), etc.
             // For now, we'll map ALL non-transparent backgrounds to our card color
-            injectedProperties += `background-color: var(--widget-cssom-card) !important; `;
+            injectedProperties += `background-color: var(--widget-th-ctrl-card) !important; `;
           }
 
           // Check color
           const colorVal = rule.style.getPropertyValue("color").trim();
           if (colorVal && colorVal !== "inherit" && colorVal !== "initial") {
-             injectedProperties += `color: var(--widget-cssom-fg) !important; `;
+             injectedProperties += `color: var(--widget-th-ctrl-fg) !important; `;
           }
 
           // Check border-color
           const borderVal = rule.style.getPropertyValue("border-color").trim();
           if (borderVal && borderVal !== "transparent" && borderVal !== "inherit" && borderVal !== "initial") {
-             injectedProperties += `border-color: var(--widget-cssom-border) !important; `;
+             injectedProperties += `border-color: var(--widget-th-ctrl-border) !important; `;
           }
 
           if (injectedProperties) {

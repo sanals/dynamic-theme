@@ -19,5 +19,5 @@ out
 dist/
 
 # Extension generated files
-extension
+extension/theme-widget.js
 
