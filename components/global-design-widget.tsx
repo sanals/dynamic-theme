@@ -77,16 +77,20 @@ export function GlobalDesignWidget({ isStandalone = false }: { isStandalone?: bo
 
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement
+    let target = e.target as Node
+    if (target.nodeType === Node.TEXT_NODE && target.parentElement) {
+      target = target.parentElement
+    }
+    const targetEl = target as HTMLElement
     
     if (!isMinimized) {
       // Don't drag if clicking interactive elements or pickers
       if (
-        target.closest("button") || 
-        target.closest("input") || 
-        target.closest("select") ||
-        target.closest("textarea") ||
-        target.closest("[draggable]")
+        targetEl.closest("button") || 
+        targetEl.closest("input") || 
+        targetEl.closest("select") ||
+        targetEl.closest("textarea") ||
+        targetEl.closest("[draggable]")
       ) {
         return
       }

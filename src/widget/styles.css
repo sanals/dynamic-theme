@@ -25,11 +25,6 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-pedestal-glow: var(--pedestal-glow);
-  --color-pedestal-top: var(--pedestal-top);
-  --color-pedestal-top-border: var(--pedestal-top-border);
-  --color-pedestal-body: var(--pedestal-body);
-  --color-pedestal-shadow: var(--pedestal-shadow);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

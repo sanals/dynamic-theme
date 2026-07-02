@@ -3,26 +3,48 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react"
 import { autoFixContrast } from "@/lib/color-utils"
 import { Engines } from "./engines"
+import { cacheAllOpenShadowRoots } from "./utils/css-parser"
 
-// Reuse the exact same CustomColors type from the main app
-export type CustomColors = {
-  background: string
-  foreground: string
-  card: string
-  cardForeground: string
-  primary: string
-  primaryForeground: string
-  secondary: string
-  secondaryForeground: string
-  muted: string
-  mutedForeground: string
-  border: string
-  pedestalGlow: string
-  pedestalTop: string
-  pedestalTopBorder: string
-  pedestalBody: string
-  pedestalShadow: string
-}
+/**
+ * The 11 core widget keys that the widget's own UI always needs.
+ * These are the "minimum guaranteed set" — the widget's internal CSS
+ * variables (--background, --primary, etc.) map to these keys.
+ * 
+ * External host sites may add additional keys dynamically.
+ */
+export const WIDGET_INTERNAL_KEYS = [
+  "background",
+  "foreground",
+  "card",
+  "cardForeground",
+  "primary",
+  "primaryForeground",
+  "secondary",
+  "secondaryForeground",
+  "muted",
+  "mutedForeground",
+  "border",
+] as const
+
+export type WidgetInternalKey = typeof WIDGET_INTERNAL_KEYS[number]
+
+/**
+ * Dynamic palette type — a flat dictionary of CSS variable keys to hex values.
+ * Always contains at least the 11 WIDGET_INTERNAL_KEYS, but may contain
+ * arbitrary additional keys discovered from the host site.
+ */
+export type CustomColors = Record<string, string>
+
+/**
+ * Contrast pairs: background/foreground pairings used for WCAG auto-fix.
+ */
+export const CONTRAST_PAIRS: [string, string][] = [
+  ["background", "foreground"],
+  ["card", "cardForeground"],
+  ["primary", "primaryForeground"],
+  ["secondary", "secondaryForeground"],
+  ["muted", "mutedForeground"],
+]
 
 const DEFAULT_CUSTOM_COLORS: CustomColors = {
   background: "#18181b", 
@@ -36,28 +58,30 @@ const DEFAULT_CUSTOM_COLORS: CustomColors = {
   muted: "#27272a",      
   mutedForeground: "#a1a1aa", 
   border: "#3f3f46",     
-  pedestalGlow: "#3b82f6",    
-  pedestalTop: "#3f3f46",     
-  pedestalTopBorder: "#3b82f6", 
-  pedestalBody: "#27272a",    
-  pedestalShadow: "#000000",  
 }
 
+export { DEFAULT_CUSTOM_COLORS }
+
 export interface CustomPaletteContextValue {
-  mode: "default" | "custom" | "mapper" | "thCtrl" | "stMgr"
-  setMode: (mode: "default" | "custom" | "mapper" | "thCtrl" | "stMgr") => void
+  mode: "default" | "custom"
+  setMode: (mode: "default" | "custom") => void
+  forceOverride: boolean
+  setForceOverride: (v: boolean) => void
   mapperMappings: Record<string, string>
   setMapperMappings: (mappings: Record<string, string>) => void
+  variableFormats: Record<string, string>
+  setVariableFormat: (key: string, format: string) => void
   customColors: CustomColors
-  setCustomColor: (key: keyof CustomColors, value: string) => void
-  applyBulkColors: (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
+  setCustomColor: (key: string, value: string) => void
+  applyBulkColors: (colors: CustomColors, lockedColors?: Record<string, boolean>) => void
+  removeCustomColor: (key: string) => void
   resetCustomColors: () => void
-  swapColors: (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => void
+  swapColors: (key1: string, key2: string, lockedColors?: Record<string, boolean>) => void
   customRadius: number | null
   setCustomRadius: (r: number | null) => void
-  lockedColors: Partial<Record<keyof CustomColors, boolean>>
-  toggleLock: (key: keyof CustomColors) => void
-  setLockedColors: (v: Partial<Record<keyof CustomColors, boolean>>) => void
+  lockedColors: Record<string, boolean>
+  toggleLock: (key: string) => void
+  setLockedColors: (v: Record<string, boolean>) => void
   undo: () => void
   redo: () => void
   canUndo: boolean
@@ -77,6 +101,7 @@ export function useCustomPalette() {
 const STORAGE_KEY = "custom-palette-colors"
 const RADIUS_STORAGE_KEY = "custom-palette-radius"
 const MODE_STORAGE_KEY = "widget-palette-mode"
+const FORCE_OVERRIDE_STORAGE_KEY = "widget-force-override"
 
 export function WidgetStateProvider({ 
   children,
@@ -85,8 +110,10 @@ export function WidgetStateProvider({
   children: React.ReactNode,
   targetElement?: () => HTMLElement 
 }) {
-  const [mode, setModeState] = useState<"default" | "custom" | "mapper" | "thCtrl" | "stMgr">("default")
+  const [mode, setModeState] = useState<"default" | "custom">("default")
+  const [forceOverride, setForceOverrideState] = useState(false)
   const [mapperMappings, setMapperMappingsState] = useState<Record<string, string>>({})
+  const [variableFormats, setVariableFormatsState] = useState<Record<string, string>>({})
   const [customColors, setCustomColors] = useState<CustomColors>(DEFAULT_CUSTOM_COLORS)
   const [customRadius, setCustomRadiusState] = useState<number | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -95,21 +122,26 @@ export function WidgetStateProvider({
   const [history, setHistory] = useState<CustomColors[]>([])
   const [future, setFuture] = useState<CustomColors[]>([])
 
-  const [lockedColors, setLockedColors] = useState<Partial<Record<keyof CustomColors, boolean>>>({})
+  const [lockedColors, setLockedColors] = useState<Record<string, boolean>>({})
 
-  const toggleLock = (key: keyof CustomColors) => {
+  const toggleLock = (key: string) => {
     setLockedColors((prev) => ({
       ...prev,
       [key]: !prev[key],
     }))
   }
 
-  const lastEditedKey = useRef<keyof CustomColors | null>(null)
+  const lastEditedKey = useRef<string | null>(null)
   const lastPushTime = useRef<number>(0)
 
-  const setMode = (m: "default" | "custom" | "mapper" | "thCtrl" | "stMgr") => {
+  const setMode = (m: "default" | "custom") => {
     setModeState(m)
     window.localStorage.setItem(MODE_STORAGE_KEY, m)
+  }
+
+  const setForceOverride = (v: boolean) => {
+    setForceOverrideState(v)
+    window.localStorage.setItem(FORCE_OVERRIDE_STORAGE_KEY, JSON.stringify(v))
   }
 
   const setMapperMappings = (m: Record<string, string>) => {
@@ -117,17 +149,38 @@ export function WidgetStateProvider({
     window.localStorage.setItem("widget-mapper-mappings", JSON.stringify(m))
   }
 
+  const setVariableFormat = (key: string, format: string) => {
+    setVariableFormatsState(prev => {
+      const next = { ...prev, [key]: format }
+      window.localStorage.setItem("widget-variable-formats", JSON.stringify(next))
+      return next
+    })
+  }
+
   // Hydrate custom colors and mode
   useEffect(() => {
     setMounted(true)
+    cacheAllOpenShadowRoots()
     try {
-      const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY) as "default" | "custom" | "mapper" | "thCtrl" | "stMgr" | null
-      if (storedMode) {
+      const storedMode = window.localStorage.getItem(MODE_STORAGE_KEY)
+      if (storedMode === 'default' || storedMode === 'custom') {
         setModeState(storedMode)
+      } else if (storedMode) {
+        // Migrate old modes (mapper/thCtrl/stMgr) to custom
+        setModeState('custom')
+        window.localStorage.setItem(MODE_STORAGE_KEY, 'custom')
+      }
+      const storedOverride = window.localStorage.getItem(FORCE_OVERRIDE_STORAGE_KEY)
+      if (storedOverride) {
+        setForceOverrideState(JSON.parse(storedOverride))
       }
       const storedMappings = window.localStorage.getItem("widget-mapper-mappings")
       if (storedMappings) {
         setMapperMappingsState(JSON.parse(storedMappings))
+      }
+      const storedFormats = window.localStorage.getItem("widget-variable-formats")
+      if (storedFormats) {
+        setVariableFormatsState(JSON.parse(storedFormats))
       }
       const stored = window.localStorage.getItem(STORAGE_KEY)
       if (stored) {
@@ -155,11 +208,14 @@ export function WidgetStateProvider({
       return
     }
 
-    const activeEngine = Engines[mode]
-    if (activeEngine) {
-      activeEngine.apply(customColors, customRadius, el, { mapperMappings })
+    // Always apply CustomEngine in custom mode
+    Engines.custom.apply(customColors, customRadius, el, { mapperMappings, variableFormats })
+
+    // If Force Override is ON, also apply the aggressive OverrideEngine
+    if (forceOverride && Engines.override) {
+      Engines.override.apply(customColors, customRadius, el, { mapperMappings, variableFormats, forceOverride: true })
     }
-  }, [customColors, customRadius, mounted, targetElement, mode, mapperMappings])
+  }, [customColors, customRadius, mounted, targetElement, mode, mapperMappings, variableFormats, forceOverride])
 
 
   const setCustomRadius = (radius: number | null) => {
@@ -218,7 +274,7 @@ export function WidgetStateProvider({
     lastPushTime.current = 0
   }
 
-  const setCustomColor = (key: keyof CustomColors, value: string) => {
+  const setCustomColor = (key: string, value: string) => {
     if (customColors[key] === value) return
 
     const now = Date.now()
@@ -237,52 +293,35 @@ export function WidgetStateProvider({
     })
   }
 
-  const applyBulkColors = (colors: string[], lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => {
+  /**
+   * Apply a full set of colors. Accepts a CustomColors object (dynamic keys).
+   * Respects locked colors. Runs contrast auto-fix on known pairs.
+   */
+  const applyBulkColors = (incoming: CustomColors, locked?: Record<string, boolean>) => {
     setCustomColors((prev) => {
       const next = { ...prev }
       let hasChanges = false
 
-      const trySet = (key: keyof CustomColors, val: string | undefined, isLocked: boolean | undefined) => {
-        if (val && !isLocked && next[key] !== val) {
+      // Apply all incoming keys, respecting locks
+      for (const [key, val] of Object.entries(incoming)) {
+        if (val && !locked?.[key] && next[key] !== val) {
           next[key] = val
           hasChanges = true
         }
       }
 
-      trySet("background", colors[0], lockedColors?.background)
-      trySet("foreground", colors[1], lockedColors?.foreground)
-      trySet("card", colors[2], lockedColors?.card)
-      trySet("cardForeground", colors[3], lockedColors?.cardForeground)
-      trySet("primary", colors[4], lockedColors?.primary)
-      trySet("primaryForeground", colors[5], lockedColors?.primaryForeground)
-      trySet("secondary", colors[6], lockedColors?.secondary)
-      trySet("secondaryForeground", colors[7], lockedColors?.secondaryForeground)
-      trySet("muted", colors[8], lockedColors?.muted)
-      trySet("mutedForeground", colors[9], lockedColors?.mutedForeground)
-      trySet("border", colors[10], lockedColors?.border)
-      trySet("pedestalGlow", colors[11], lockedColors?.pedestalGlow)
-      trySet("pedestalTop", colors[12], lockedColors?.pedestalTop)
-      trySet("pedestalTopBorder", colors[13], lockedColors?.pedestalTopBorder)
-      trySet("pedestalBody", colors[14], lockedColors?.pedestalBody)
-      trySet("pedestalShadow", colors[15], lockedColors?.pedestalShadow)
-
+      // Auto-fix contrast on known pairs
       const MIN_RATIO = 2.5;
       let wasModified = false;
-      const enforce = (bgKey: keyof CustomColors, fgKey: keyof CustomColors) => {
-        if (!lockedColors?.[bgKey] && !lockedColors?.[fgKey]) {
+      for (const [bgKey, fgKey] of CONTRAST_PAIRS) {
+        if (next[bgKey] && next[fgKey] && !locked?.[bgKey] && !locked?.[fgKey]) {
           const newFg = autoFixContrast(next[bgKey], next[fgKey], MIN_RATIO);
           if (newFg.toUpperCase() !== next[fgKey].toUpperCase()) {
             next[fgKey] = newFg;
             wasModified = true;
           }
         }
-      };
-
-      enforce("background", "foreground");
-      enforce("card", "cardForeground");
-      enforce("primary", "primaryForeground");
-      enforce("secondary", "secondaryForeground");
-      enforce("muted", "mutedForeground");
+      }
 
       if (!hasChanges && !wasModified) return prev
 
@@ -301,6 +340,20 @@ export function WidgetStateProvider({
     })
   }
 
+  const removeCustomColor = (key: string) => {
+    // Only allow removing non-core keys (dynamically discovered variables)
+    if ((WIDGET_INTERNAL_KEYS as readonly string[]).includes(key)) return
+    pushToHistory(customColors)
+    lastEditedKey.current = null
+    lastPushTime.current = 0
+    setCustomColors((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
   const resetCustomColors = () => {
     pushToHistory(customColors)
     lastEditedKey.current = null
@@ -310,9 +363,9 @@ export function WidgetStateProvider({
     window.localStorage.removeItem(STORAGE_KEY)
   }
 
-  const swapColors = (key1: keyof CustomColors, key2: keyof CustomColors, lockedColors?: Partial<Record<keyof CustomColors, boolean>>) => {
+  const swapColors = (key1: string, key2: string, locked?: Record<string, boolean>) => {
     if (key1 === key2) return
-    if (lockedColors?.[key1] || lockedColors?.[key2]) return
+    if (locked?.[key1] || locked?.[key2]) return
     pushToHistory(customColors)
     lastEditedKey.current = null
     lastPushTime.current = 0
@@ -327,31 +380,23 @@ export function WidgetStateProvider({
     })
   }
 
+  // Generate CSS for the widget's own shadow DOM styling
+  const widgetInternalCss = WIDGET_INTERNAL_KEYS.map(key => {
+    const val = customColors[key] || DEFAULT_CUSTOM_COLORS[key]
+    // Convert camelCase key to kebab-case CSS variable
+    const cssVar = key.replace(/([A-Z])/g, '-$1').toLowerCase()
+    return `--${cssVar}: ${val};`
+  }).join('\n      ')
+
   const customCss = `
     :host {
-      --background: ${customColors.background};
-      --foreground: ${customColors.foreground};
-      --card: ${customColors.card};
-      --card-foreground: ${customColors.cardForeground};
-      --popover: ${customColors.card};
-      --popover-foreground: ${customColors.foreground};
-      --primary: ${customColors.primary};
-      --primary-foreground: ${customColors.primaryForeground};
-      --secondary: ${customColors.secondary};
-      --secondary-foreground: ${customColors.secondaryForeground};
-      --muted: ${customColors.muted};
-      --muted-foreground: ${customColors.mutedForeground};
-      --accent: ${customColors.primary};
-      --accent-foreground: ${customColors.primaryForeground};
-      --border: ${customColors.border};
-      --input: ${customColors.border};
-      --ring: ${customColors.primary};
-      
-      --pedestal-glow: ${customColors.pedestalGlow};
-      --pedestal-top: ${customColors.pedestalTop};
-      --pedestal-top-border: ${customColors.pedestalTopBorder};
-      --pedestal-body: ${customColors.pedestalBody};
-      --pedestal-shadow: ${customColors.pedestalShadow};
+      ${widgetInternalCss}
+      --popover: ${customColors.card || DEFAULT_CUSTOM_COLORS.card};
+      --popover-foreground: ${customColors.foreground || DEFAULT_CUSTOM_COLORS.foreground};
+      --accent: ${customColors.primary || DEFAULT_CUSTOM_COLORS.primary};
+      --accent-foreground: ${customColors.primaryForeground || DEFAULT_CUSTOM_COLORS.primaryForeground};
+      --input: ${customColors.border || DEFAULT_CUSTOM_COLORS.border};
+      --ring: ${customColors.primary || DEFAULT_CUSTOM_COLORS.primary};
       ${customRadius !== null ? `--radius: ${customRadius}rem;` : ''}
     }
   `
@@ -361,10 +406,15 @@ export function WidgetStateProvider({
       value={{
         mode,
         setMode,
+        forceOverride,
+        setForceOverride,
         mapperMappings,
         setMapperMappings,
+        variableFormats,
+        setVariableFormat,
         customColors,
         setCustomColor,
+        removeCustomColor,
         applyBulkColors,
         resetCustomColors,
         swapColors,

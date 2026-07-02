@@ -1,4 +1,4 @@
-import { type CustomColors } from "@/src/widget/WidgetStateProvider"
+import { type CustomColors, WIDGET_INTERNAL_KEYS } from "@/src/widget/WidgetStateProvider"
 import { type DesignId } from "@/lib/design-config"
 
 interface HSL {
@@ -118,7 +118,7 @@ type HarmonyType = "analogous" | "complementary" | "triadic" | "split" | "monoch
 
 export function generatePalette(
   currentColors: CustomColors,
-  lockedKeys: Partial<Record<keyof CustomColors, boolean>>,
+  lockedKeys: Record<string, boolean>,
   activeDesign: DesignId
 ): CustomColors {
   const result = { ...currentColors }
@@ -131,7 +131,7 @@ export function generatePalette(
   if (lockedKeys.primary) {
     seedHsl = hexToHsl(currentColors.primary)
   } else {
-    const lockedKey = (Object.keys(lockedKeys) as Array<keyof CustomColors>).find(
+    const lockedKey = Object.keys(lockedKeys).find(
       (k) => lockedKeys[k] && currentColors[k]
     )
     if (lockedKey) {
@@ -172,22 +172,17 @@ export function generatePalette(
   }
 
   // 2. Determine general theme brightness (dark vs light theme)
-  // Check if background color is locked. If yes, check if it's light or dark.
-  // Otherwise, use the seed color's lightness to infer the user's intent.
-  // If the seed color is very light (L > 75), it's probably a light theme.
-  // If the seed color is very dark (L < 25), it's probably a dark theme.
-  // If it's a mid-tone color, randomly favor dark themes (80%).
   let isDark = true
   if (lockedKeys.background) {
     const bgHsl = hexToHsl(currentColors.background)
     isDark = bgHsl.l < 50
   } else {
     if (seedHsl.l > 75) {
-      isDark = false // Seed is light, assume light theme
+      isDark = false
     } else if (seedHsl.l < 25) {
-      isDark = true // Seed is dark, assume dark theme
+      isDark = true
     } else {
-      isDark = Math.random() < 0.8 // Random fallback, favor dark
+      isDark = Math.random() < 0.8
     }
   }
 
@@ -200,14 +195,14 @@ export function generatePalette(
   })
 
   // 3. Define color slots based on lightness preference
-  const generated: Partial<Record<keyof CustomColors, string>> = {}
+  const generated: Record<string, string> = {}
 
   if (isDark) {
     const bgH = (seedHsl.h + 10) % 360
     const bgS = Math.min(15, seedHsl.s)
-    generated.background = hslToHex(getHsl(bgH, bgS, 8)) // Very dark grey/colored
-    generated.foreground = hslToHex(getHsl(seedHsl.h, 10, 95)) // Almost white
-    generated.card = hslToHex(getHsl(bgH, bgS + 4, 14)) // Slightly lighter card
+    generated.background = hslToHex(getHsl(bgH, bgS, 8))
+    generated.foreground = hslToHex(getHsl(seedHsl.h, 10, 95))
+    generated.card = hslToHex(getHsl(bgH, bgS + 4, 14))
     generated.cardForeground = hslToHex(getHsl(seedHsl.h, 10, 92))
     generated.muted = hslToHex(getHsl(bgH, bgS + 2, 16))
     generated.mutedForeground = hslToHex(getHsl(seedHsl.h, 15, 60))
@@ -215,21 +210,20 @@ export function generatePalette(
   } else {
     const bgH = seedHsl.h
     const bgS = Math.min(10, seedHsl.s)
-    generated.background = hslToHex(getHsl(bgH, bgS, 97)) // Soft off-white
-    generated.foreground = hslToHex(getHsl(seedHsl.h, 15, 12)) // Dark text
-    generated.card = hslToHex(getHsl(bgH, bgS + 2, 100)) // Pure white card
+    generated.background = hslToHex(getHsl(bgH, bgS, 97))
+    generated.foreground = hslToHex(getHsl(seedHsl.h, 15, 12))
+    generated.card = hslToHex(getHsl(bgH, bgS + 2, 100))
     generated.cardForeground = hslToHex(getHsl(seedHsl.h, 15, 15))
     generated.muted = hslToHex(getHsl(bgH, bgS + 4, 92))
     generated.mutedForeground = hslToHex(getHsl(seedHsl.h, 15, 45))
     generated.border = hslToHex(getHsl(bgH, bgS + 8, 86))
   }
 
-  // Primary Accent (seedHsl or accentHue depending on locks)
+  // Primary Accent
   generated.primary = hslToHex(getHsl(primaryHue, seedHsl.s, isDark ? 55 : 45))
-  // Contrast color for primary text
   generated.primaryForeground = seedHsl.l > 60 || (harmony === "monochromatic" && seedHsl.l > 60)
-    ? "#09090b" // black
-    : "#ffffff" // white
+    ? "#09090b"
+    : "#ffffff"
 
   // Secondary Accent
   generated.secondary = isDark
@@ -237,30 +231,12 @@ export function generatePalette(
     : hslToHex(getHsl(secondaryHue, Math.max(15, seedHsl.s - 20), 90))
   generated.secondaryForeground = isDark ? "#ffffff" : "#09090b"
 
-  if (activeDesign === "gallery" || activeDesign === "storefront") {
-    // Pedestal Glow matches accent color
-    generated.pedestalGlow = hslToHex(getHsl(primaryHue, seedHsl.s, 50, 0.4))
-    
-    if (isDark) {
-      generated.pedestalTop = hslToHex(getHsl(primaryHue, 12, 18))
-      generated.pedestalTopBorder = hslToHex(getHsl(primaryHue, seedHsl.s, 40, 0.25))
-      generated.pedestalBody = hslToHex(getHsl(primaryHue, 10, 13))
-      generated.pedestalShadow = "#000000"
-    } else {
-      generated.pedestalTop = hslToHex(getHsl(primaryHue, 10, 93))
-      generated.pedestalTopBorder = hslToHex(getHsl(primaryHue, seedHsl.s, 40, 0.15))
-      generated.pedestalBody = hslToHex(getHsl(primaryHue, 8, 88))
-      generated.pedestalShadow = hslToHex(getHsl(primaryHue, 10, 30, 0.15))
+  // 5. Apply generated values, preserving locked colors
+  for (const k of Object.keys(result)) {
+    if (!lockedKeys[k] && generated[k] !== undefined) {
+      result[k] = generated[k]
     }
   }
-
-  // 5. Apply generated values, preserving locked colors
-  Object.keys(result).forEach((k) => {
-    const colorKey = k as keyof CustomColors
-    if (!lockedKeys[colorKey] && generated[colorKey] !== undefined) {
-      result[colorKey] = generated[colorKey]!
-    }
-  })
 
   return result
 }

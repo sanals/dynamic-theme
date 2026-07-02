@@ -1,10 +1,9 @@
-// @ts-nocheck
-import { extractHostVariables, autoMapVariables, findVariableForElement } from "@/src/widget/utils/css-parser"
+import { extractHostVariableNames, extractElementVariables, autoMapVariables, findVariableForElement, knownShadowRoots, resolveColorToHex } from "@/src/widget/utils/css-parser"
 "use client"
 
 import { useEffect, useState, useRef } from "react"
 import { createPortal, flushSync } from "react-dom"
-import { Frame, Palette, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 , Search, Crosshair } from "lucide-react"
+import { Frame, Palette, RotateCcw, Copy, Check, Minimize2, Sun, Moon, Lock, Unlock, Shuffle, Download, Upload, Columns, Share2, Camera, Undo2, Redo2, ChevronDown, ChevronLeft, Link2, Eye, Sparkles, Loader2, ImagePlus, Wand2 , Search, Crosshair, X, Plus } from "lucide-react"
 import {
   designs,
   darkLightPairs,
@@ -13,7 +12,7 @@ import {
 } from "@/lib/design-config"
 import { useFont } from "@/src/widget/font-provider"
 import { fontPairings, type FontPairingId } from "@/lib/font-config"
-import { useCustomPalette, type CustomColors } from "@/src/widget/WidgetStateProvider"
+import { useCustomPalette, type CustomColors, WIDGET_INTERNAL_KEYS, CONTRAST_PAIRS } from "@/src/widget/WidgetStateProvider"
 import { cn } from "@/lib/utils"
 import { generatePalette } from "@/lib/palette-generator"
 import { getContrastInfo, extractDominantColor, autoFixContrast, getRelativeLuminance, getContrastRatio } from "@/lib/color-utils"
@@ -44,11 +43,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#2c1e3d",
       mutedForeground: "#bca0dc",
       border: "#4b3269",
-      pedestalGlow: "#ff6b6b",
-      pedestalTop: "#3e275c",
-      pedestalTopBorder: "#ff6b6b",
-      pedestalBody: "#2c1e3d",
-      pedestalShadow: "#0d0614",
     }
   },
   {
@@ -66,11 +60,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#151722",
       mutedForeground: "#787f9d",
       border: "#ff007f",
-      pedestalGlow: "#ff007f",
-      pedestalTop: "#1c1e2d",
-      pedestalTopBorder: "#00f0ff",
-      pedestalBody: "#151722",
-      pedestalShadow: "#000000",
     }
   },
   {
@@ -88,11 +77,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#bcccdc",
       mutedForeground: "#486581",
       border: "#d9e2ec",
-      pedestalGlow: "#627d98",
-      pedestalTop: "#e1e8ed",
-      pedestalTopBorder: "#bcccdc",
-      pedestalBody: "#bcccdc",
-      pedestalShadow: "#102a4315",
     }
   },
   {
@@ -110,11 +94,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#f4ede0",
       mutedForeground: "#8c877d",
       border: "#dfd5c2",
-      pedestalGlow: "#d95d39",
-      pedestalTop: "#ebe0cc",
-      pedestalTopBorder: "#d95d39",
-      pedestalBody: "#dfd5c2",
-      pedestalShadow: "#2b2a2712",
     }
   },
   {
@@ -132,11 +111,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#EDEDE8",
       mutedForeground: "#6F6C52",
       border: "#E2E1D5",
-      pedestalGlow: "#F5E10A66",
-      pedestalTop: "#EFEFEB",
-      pedestalTopBorder: "#C4B40826",
-      pedestalBody: "#E3E2DE",
-      pedestalShadow: "#54534526",
     }
   },
   {
@@ -154,11 +128,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#292624",
       mutedForeground: "#A49D94",
       border: "#FFFFFF14",
-      pedestalGlow: "#ff0000",
-      pedestalTop: "#3A2A20",
-      pedestalTopBorder: "#4D3A2F",
-      pedestalBody: "#241913",
-      pedestalShadow: "#0E0A08",
     }
   },
   {
@@ -176,11 +145,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#223029",
       mutedForeground: "#8AA895",
       border: "#2D4339",
-      pedestalGlow: "#59A67566",
-      pedestalTop: "#28332C",
-      pedestalTopBorder: "#47855E40",
-      pedestalBody: "#1E2420",
-      pedestalShadow: "#000000",
     }
   },
   {
@@ -198,11 +162,6 @@ export const BUILTIN_PRESETS: Preset[] = [
       muted: "#E8E9ED",
       mutedForeground: "#626884",
       border: "#D5D7E2",
-      pedestalGlow: "#636F9C66",
-      pedestalTop: "#EBECEF",
-      pedestalTopBorder: "#50597C26",
-      pedestalBody: "#DEDFE3",
-      pedestalShadow: "#45485426",
     }
   }
 ]
@@ -265,18 +224,50 @@ function DraggableColorPicker({
   onSwap,
   isLocked,
   onToggleLock,
+  isHighlighted,
 }: {
-  colorKey: keyof CustomColors
+  colorKey: string
   label: string
   value: string
   onChange: (val: string) => void
-  onSwap: (source: keyof CustomColors, target: keyof CustomColors) => void
+  onSwap: (source: string, target: string) => void
   isLocked?: boolean
   onToggleLock?: () => void
+  isHighlighted?: boolean
 }) {
   const [copied, setCopied] = useState(false)
   const [isHoveringInput, setIsHoveringInput] = useState(false)
   const safeValue = value || "#000000"
+
+  const inputRef = useRef<HTMLInputElement>(null)
+  const throttleRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // We track the last color we deliberately *set* or *received* to know if a change is external.
+  const latestColorRef = useRef(safeValue)
+
+  // Sync external changes (e.g., undo/redo, element picker) directly to the DOM node
+  // only if they differ from what we are currently broadcasting.
+  useEffect(() => {
+    if (safeValue !== latestColorRef.current) {
+      latestColorRef.current = safeValue
+      if (inputRef.current) {
+        inputRef.current.value = safeValue.slice(0, 7)
+      }
+    }
+  }, [safeValue])
+
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value
+    latestColorRef.current = newColor
+
+    // Throttle the heavy global React re-render to ~30fps
+    if (!throttleRef.current) {
+      throttleRef.current = setTimeout(() => {
+        onChange(latestColorRef.current)
+        throttleRef.current = null
+      }, 33)
+    }
+  }
 
   const copySingle = () => {
     navigator.clipboard.writeText(safeValue).then(() => {
@@ -288,6 +279,10 @@ function DraggableColorPicker({
   return (
     <div
       draggable={!isHoveringInput && !isLocked}
+      className={cn(
+        "group/item flex flex-col items-center gap-1.5 w-[76px] shrink-0 transition-transform duration-300",
+        isHighlighted && "scale-110 -translate-y-2 drop-shadow-2xl z-50 animate-pulse"
+      )}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", colorKey)
         e.dataTransfer.effectAllowed = "move"
@@ -311,7 +306,7 @@ function DraggableColorPicker({
           return
         }
 
-        const sourceKey = e.dataTransfer.getData("text/plain") as keyof CustomColors
+        const sourceKey = e.dataTransfer.getData("text/plain")
         if (sourceKey && sourceKey !== colorKey) {
           onSwap(sourceKey, colorKey)
         }
@@ -332,9 +327,10 @@ function DraggableColorPicker({
       </button>
       <div className="relative group/picker size-6">
         <input
+          ref={inputRef}
           type="color"
-          value={safeValue.slice(0, 7)}
-          onChange={(e) => onChange(e.target.value)}
+          defaultValue={safeValue.slice(0, 7)}
+          onChange={handleColorChange}
           disabled={isLocked}
           className={cn(
             "size-full border-0 p-0 rounded-md overflow-hidden shrink-0",
@@ -404,10 +400,15 @@ export function DesignControls({
   const {
     mode,
     setMode,
+    forceOverride,
+    setForceOverride,
     mapperMappings,
     setMapperMappings,
+    variableFormats,
+    setVariableFormat,
     customColors,
     setCustomColor,
+    removeCustomColor,
     applyBulkColors,
     resetCustomColors,
     swapColors,
@@ -463,7 +464,7 @@ export function DesignControls({
   }
 
 
-  const [pedestalColorsExpanded, setPedestalColorsExpanded] = useState(false)
+
   const [presetsExpanded, setPresetsExpanded] = useState(false)
   const [maxVisiblePresets, setMaxVisiblePresets] = useState(4)
   const presetsContainerRef = useRef<HTMLDivElement>(null)
@@ -474,6 +475,8 @@ export function DesignControls({
   const fontFileInputRef = useRef<HTMLInputElement>(null)
   const [detectedVariables, setDetectedVariables] = useState<string[]>([])
   const [activePickerToken, setActivePickerToken] = useState<string | null>(null)
+  const [isPickingElement, setIsPickingElement] = useState(false)
+  const [highlightedKeys, setHighlightedKeys] = useState<string[]>([])
 
   // Image Theme Extractor
   const imageFileInputRef = useRef<HTMLInputElement>(null)
@@ -504,12 +507,7 @@ export function DesignControls({
 
   const handleShareLink = () => {
     const c = getActiveColors()
-    const colorParams = [
-      c.background, c.foreground, c.card, c.cardForeground,
-      c.primary, c.primaryForeground, c.secondary, c.secondaryForeground,
-      c.muted, c.mutedForeground, c.border,
-      c.pedestalGlow, c.pedestalTop, c.pedestalTopBorder, c.pedestalBody, c.pedestalShadow
-    ].map(color => (color || "").replace("#", "")).join(",")
+    const colorParams = WIDGET_INTERNAL_KEYS.map(key => (c[key] || "").replace("#", "")).join(",")
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?d=${activeDesign}&f=${activeFont}&t=${theme}&c=${colorParams}`
 
@@ -641,25 +639,9 @@ export function DesignControls({
   }, [])
 
   const handleApplyPreset = (preset: Preset) => {
-    applyBulkColors([
-      preset.colors.background,
-      preset.colors.foreground,
-      preset.colors.card,
-      preset.colors.cardForeground,
-      preset.colors.primary,
-      preset.colors.primaryForeground,
-      preset.colors.secondary,
-      preset.colors.secondaryForeground,
-      preset.colors.muted,
-      preset.colors.mutedForeground,
-      preset.colors.border,
-      preset.colors.pedestalGlow,
-      preset.colors.pedestalTop,
-      preset.colors.pedestalTopBorder,
-      preset.colors.pedestalBody,
-      preset.colors.pedestalShadow,
-    ])
+    applyBulkColors(preset.colors)
   }
+
 
   const handleSavePreset = () => {
     const trimmedName = newPresetName.trim()
@@ -728,24 +710,8 @@ export function DesignControls({
         throw new Error("Failed to generate theme")
       }
       const newColors = await res.json()
-      applyBulkColors([
-        newColors.background,
-        newColors.foreground,
-        newColors.card,
-        newColors.cardForeground,
-        newColors.primary,
-        newColors.primaryForeground,
-        newColors.secondary,
-        newColors.secondaryForeground,
-        newColors.muted,
-        newColors.mutedForeground,
-        newColors.border,
-        newColors.pedestalGlow || customColors.pedestalGlow,
-        newColors.pedestalTop || customColors.pedestalTop,
-        newColors.pedestalTopBorder || customColors.pedestalTopBorder,
-        newColors.pedestalBody || customColors.pedestalBody,
-        newColors.pedestalShadow || customColors.pedestalShadow,
-      ], lockedColors)
+      applyBulkColors(newColors, lockedColors)
+
       setAiPrompt("")
     } catch (err) {
       console.error(err)
@@ -796,24 +762,7 @@ export function DesignControls({
       )
 
       // Apply the newly generated palette, passing lockedColors to prevent overwriting
-      applyBulkColors([
-        newPalette.background,
-        newPalette.foreground,
-        newPalette.card,
-        newPalette.cardForeground,
-        newPalette.primary,
-        newPalette.primaryForeground,
-        newPalette.secondary,
-        newPalette.secondaryForeground,
-        newPalette.muted,
-        newPalette.mutedForeground,
-        newPalette.border,
-        newPalette.pedestalGlow,
-        newPalette.pedestalTop,
-        newPalette.pedestalTopBorder,
-        newPalette.pedestalBody,
-        newPalette.pedestalShadow,
-      ], lockedColors)
+      applyBulkColors(newPalette, lockedColors)
     } catch (err) {
       console.error(err)
       alert("Failed to extract color from image.")
@@ -853,50 +802,23 @@ export function DesignControls({
       setWcagMessage("Maximum possible contrast reached. Cannot improve further without altering background colors.")
       setTimeout(() => setWcagMessage(null), 4000)
     } else {
-      applyBulkColors([
-        customColors.background,
-        newFg,
-        customColors.card,
-        newCardFg,
-        customColors.primary,
-        newPrimaryFg,
-        customColors.secondary,
-        newSecondaryFg,
-        customColors.muted,
-        newMutedFg,
-        customColors.border,
-        customColors.pedestalGlow,
-        customColors.pedestalTop,
-        customColors.pedestalTopBorder,
-        customColors.pedestalBody,
-        customColors.pedestalShadow,
-      ])
+      applyBulkColors({
+        ...customColors,
+        foreground: newFg,
+        cardForeground: newCardFg,
+        primaryForeground: newPrimaryFg,
+        secondaryForeground: newSecondaryFg,
+        mutedForeground: newMutedFg,
+      })
     }
   }
 
   const handleRandomizePalette = () => {
     const newColors = generatePalette(customColors, lockedColors, activeDesign)
-    applyBulkColors([
-      newColors.background,
-      newColors.foreground,
-      newColors.card,
-      newColors.cardForeground,
-      newColors.primary,
-      newColors.primaryForeground,
-      newColors.secondary,
-      newColors.secondaryForeground,
-      newColors.muted,
-      newColors.mutedForeground,
-      newColors.border,
-      newColors.pedestalGlow,
-      newColors.pedestalTop,
-      newColors.pedestalTopBorder,
-      newColors.pedestalBody,
-      newColors.pedestalShadow,
-    ], lockedColors)
+    applyBulkColors(newColors, lockedColors)
   }
 
-  const handleSwapColors = (source: keyof CustomColors, target: keyof CustomColors) => {
+  const handleSwapColors = (source: string, target: string) => {
     swapColors(source, target, lockedColors)
   }
 
@@ -1048,11 +970,6 @@ export function DesignControls({
       muted: getHex("bg-muted"),
       mutedForeground: getHex("bg-muted-foreground"),
       border: getHexBorder("border-border"),
-      pedestalGlow: getHex("bg-pedestal-glow"),
-      pedestalTop: getHex("bg-pedestal-top"),
-      pedestalTopBorder: getHex("bg-pedestal-top-border"),
-      pedestalBody: getHex("bg-pedestal-body"),
-      pedestalShadow: getHex("bg-pedestal-shadow"),
     }
 
     document.body.removeChild(testDiv)
@@ -1061,23 +978,7 @@ export function DesignControls({
 
   const handleCopyPalette = () => {
     const c = getActiveColors()
-    let paletteString = [
-      c.background,
-      c.foreground,
-      c.card,
-      c.cardForeground,
-      c.primary,
-      c.primaryForeground,
-      c.secondary,
-      c.secondaryForeground,
-      c.muted,
-      c.mutedForeground,
-      c.border,
-    ].join(", ")
-
-    if (activeDesign === "gallery" || activeDesign === "storefront") {
-      paletteString += `, ${c.pedestalGlow}, ${c.pedestalTop}, ${c.pedestalTopBorder}, ${c.pedestalBody}, ${c.pedestalShadow}`
-    }
+    let paletteString = WIDGET_INTERNAL_KEYS.map(k => c[k]).join(", ")
 
     navigator.clipboard.writeText(paletteString).then(() => {
       setCopied(true)
@@ -1110,13 +1011,6 @@ export function DesignControls({
   --border: ${c.border};
   --input: ${c.border};
   --ring: ${c.primary};
-  
-  /* Pedestal variables */
-  --pedestal-glow: ${c.pedestalGlow};
-  --pedestal-top: ${c.pedestalTop};
-  --pedestal-top-border: ${c.pedestalTopBorder};
-  --pedestal-body: ${c.pedestalBody};
-  --pedestal-shadow: ${c.pedestalShadow};
 }`
   }
 
@@ -1139,14 +1033,14 @@ export function DesignControls({
   const [varsCopied, setVarsCopied] = useState(false)
 
   const handleScanVariables = () => {
-    const vars = extractHostVariables()
+    const vars = extractHostVariableNames()
     setDetectedVariables(vars)
   }
 
   const handleCopyVariables = () => {
     let vars = detectedVariables
     if (vars.length === 0) {
-      vars = extractHostVariables()
+      vars = extractHostVariableNames()
       setDetectedVariables(vars)
     }
     const rootStyle = window.getComputedStyle(document.documentElement)
@@ -1171,21 +1065,31 @@ export function DesignControls({
     if (!activePickerToken) return
 
     const handleMouseMove = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
+      let target = (e.composedPath && e.composedPath().length > 0 ? e.composedPath()[0] : e.target) as Node
+      if (target.nodeType === Node.TEXT_NODE && target.parentElement) {
+        target = target.parentElement
+      }
+      const targetEl = target as HTMLElement
+
       // Don't highlight widget elements
-      if (target.closest('.theme-widget-container')) return
+      if (targetEl.closest && targetEl.closest('.theme-widget-container')) return
       
-      target.setAttribute('data-picker-highlight', 'true')
-      target.style.outline = '2px solid #a855f7'
-      target.style.outlineOffset = '2px'
+      targetEl.setAttribute('data-picker-highlight', 'true')
+      targetEl.style.outline = '2px solid #a855f7'
+      targetEl.style.outlineOffset = '2px'
     }
 
     const handleMouseOut = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (target.hasAttribute('data-picker-highlight')) {
-        target.removeAttribute('data-picker-highlight')
-        target.style.outline = ''
-        target.style.outlineOffset = ''
+      let target = (e.composedPath && e.composedPath().length > 0 ? e.composedPath()[0] : e.target) as Node
+      if (target.nodeType === Node.TEXT_NODE && target.parentElement) {
+        target = target.parentElement
+      }
+      const targetEl = target as HTMLElement
+
+      if (targetEl.hasAttribute && targetEl.hasAttribute('data-picker-highlight')) {
+        targetEl.removeAttribute('data-picker-highlight')
+        targetEl.style.outline = ''
+        targetEl.style.outlineOffset = ''
       }
     }
 
@@ -1193,8 +1097,13 @@ export function DesignControls({
       e.preventDefault()
       e.stopPropagation()
       
-      const target = e.target as HTMLElement
-      if (target.closest('.theme-widget-container')) return
+      let target = (e.composedPath && e.composedPath().length > 0 ? e.composedPath()[0] : e.target) as Node
+      if (target.nodeType === Node.TEXT_NODE && target.parentElement) {
+        target = target.parentElement
+      }
+      const targetEl = target as HTMLElement
+
+      if (targetEl.closest && targetEl.closest('.theme-widget-container')) return
 
       // Clean up outline immediately
       handleMouseOut(e)
@@ -1202,11 +1111,11 @@ export function DesignControls({
       // Ensure we have scanned variables
       let vars = detectedVariables
       if (vars.length === 0) {
-        vars = extractHostVariables()
+        vars = extractHostVariableNames(path)
         setDetectedVariables(vars)
       }
 
-      const match = findVariableForElement(target, activePickerToken, vars)
+      const match = findVariableForElement(targetEl, activePickerToken, vars)
       if (match) {
         setMapperMappings(prev => ({ ...prev, [activePickerToken]: match }))
       } else {
@@ -1246,14 +1155,260 @@ export function DesignControls({
   const handleAutoMap = () => {
     let vars = detectedVariables
     if (vars.length === 0) {
-      vars = extractHostVariables()
+      vars = extractHostVariableNames()
       setDetectedVariables(vars)
     }
     const mapped = autoMapVariables(vars)
     setMapperMappings({ ...mapperMappings, ...mapped })
   }
 
+  // ── Element Picker: click any element to discover its CSS variables ──
+  useEffect(() => {
+    if (!isPickingElement) return
 
+    // Create a non-interfering highlight overlay
+    const highlight = document.createElement('div')
+    highlight.id = 'theme-widget-picker-highlight'
+    highlight.style.position = 'fixed'
+    highlight.style.pointerEvents = 'none'
+    highlight.style.zIndex = '2147483647' // Max z-index
+    highlight.style.outline = '2px dashed #22d3ee'
+    highlight.style.backgroundColor = 'rgba(34, 211, 238, 0.1)'
+    highlight.style.transition = 'all 0.1s ease-out'
+    highlight.style.display = 'none'
+    document.body.appendChild(highlight)
+
+    const tooltip = document.createElement('div')
+    tooltip.id = 'theme-widget-picker-tooltip'
+    tooltip.style.position = 'fixed'
+    tooltip.style.pointerEvents = 'none'
+    tooltip.style.zIndex = '2147483647'
+    tooltip.style.backgroundColor = '#181C1F'
+    tooltip.style.color = '#F8FAFC'
+    tooltip.style.padding = '6px 10px'
+    tooltip.style.borderRadius = '6px'
+    tooltip.style.fontSize = '12px'
+    tooltip.style.fontFamily = 'monospace'
+    tooltip.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)'
+    tooltip.style.border = '1px solid #334155'
+    tooltip.style.display = 'none'
+    tooltip.style.flexDirection = 'column'
+    tooltip.style.gap = '4px'
+    document.body.appendChild(tooltip)
+
+    // Create a global style to force crosshair cursor even on links/buttons
+    const cursorStyle = document.createElement('style')
+    cursorStyle.id = 'theme-widget-picker-cursor'
+    cursorStyle.innerHTML = `*, *::before, *::after { cursor: crosshair !important; }`
+    document.head.appendChild(cursorStyle)
+
+    // Also inject into known shadow roots
+    const shadowCursorStyles: HTMLStyleElement[] = []
+    knownShadowRoots.forEach(root => {
+      const s = document.createElement('style')
+      s.innerHTML = cursorStyle.innerHTML
+      root.appendChild(s)
+      shadowCursorStyles.push(s)
+    })
+
+    const handleMouseMove = (e: MouseEvent) => {
+      let target = (e.composedPath && e.composedPath().length > 0 ? e.composedPath()[0] : e.target) as Node
+      if (target.nodeType === Node.TEXT_NODE && target.parentElement) {
+        target = target.parentElement
+      }
+      const targetEl = target as HTMLElement
+
+      if (targetEl.closest && targetEl.closest('.theme-widget-container')) {
+        highlight.style.display = 'none'
+        return
+      }
+      
+      const rect = targetEl.getBoundingClientRect()
+      highlight.style.display = 'block'
+      highlight.style.top = `${rect.top}px`
+      highlight.style.left = `${rect.left}px`
+      highlight.style.width = `${rect.width}px`
+      highlight.style.height = `${rect.height}px`
+
+      const computed = window.getComputedStyle(targetEl)
+      const bgColor = computed.backgroundColor
+      const textColor = computed.color
+      const bgHex = resolveColorToHex(bgColor) || bgColor
+      const textHex = resolveColorToHex(textColor) || textColor
+
+      tooltip.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="width:12px; height:12px; background:${bgColor}; border:1px solid #475569; border-radius:2px;"></div>
+            <span style="opacity:0.8">Bg</span>
+          </div>
+          <span style="opacity:0.6">${bgHex}</span>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="width:12px; height:12px; background:${textColor}; border:1px solid #475569; border-radius:2px;"></div>
+            <span style="opacity:0.8">Text</span>
+          </div>
+          <span style="opacity:0.6">${textHex}</span>
+        </div>
+      `
+      tooltip.style.display = 'flex'
+      tooltip.style.left = `${e.clientX + 15}px`
+      tooltip.style.top = `${e.clientY + 15}px`
+    }
+
+    const handleClick = (e: MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      const path = e.composedPath ? e.composedPath() : []
+      let target = (path.length > 0 ? path[0] : e.target) as Node
+      if (target.nodeType === Node.TEXT_NODE && target.parentElement) {
+        target = target.parentElement
+      }
+      const targetEl = target as HTMLElement
+
+      if (targetEl.closest && targetEl.closest('.theme-widget-container')) return
+
+      // Snapshot 1: Extract variables while the element is STILL HOVERED
+      const discoveredHover = extractElementVariables(targetEl, path)
+
+      // HACK: To extract the *default* color and not the :hover color,
+      // we need to temporarily move the mouse off the element and disable transitions.
+      // We do this by putting an invisible blocker over the screen and waiting a tiny bit.
+      const blocker = document.createElement('div')
+      blocker.style.position = 'fixed'
+      blocker.style.inset = '0'
+      blocker.style.zIndex = '2147483647' // Max z-index
+      document.body.appendChild(blocker)
+
+      const noTransition = document.createElement('style')
+      noTransition.textContent = `* { transition: none !important; animation: none !important; }`
+      document.head.appendChild(noTransition)
+      
+      const noTransitionShadows: HTMLStyleElement[] = []
+      knownShadowRoots.forEach(root => {
+        const s = document.createElement('style')
+        s.textContent = noTransition.textContent
+        root.appendChild(s)
+        noTransitionShadows.push(s)
+      })
+
+      // Wait 50ms for the browser to clear :hover state and snap transitions to 0
+      setTimeout(() => {
+        // Snapshot 2: Extract variables while the element is UNHOVERED
+        const discoveredDefault = extractElementVariables(targetEl, path)
+        
+        // Cleanup
+        document.body.removeChild(blocker)
+        document.head.removeChild(noTransition)
+        noTransitionShadows.forEach(s => s.parentNode && s.parentNode.removeChild(s))
+
+        // Merge the two snapshots to get BOTH hover and default variables!
+        const discovered = [...discoveredHover]
+        for (const def of discoveredDefault) {
+          if (!discovered.some(d => d.name === def.name)) {
+            discovered.push(def)
+          }
+        }
+
+        let alreadyExists: string[] = []
+        
+        if (discovered.length > 0) {
+          for (const dv of discovered) {
+            const key = dv.name
+            if (dv.format) {
+              setVariableFormat(key, dv.format)
+            }
+            if (!customColors[key]) {
+              setCustomColor(key, dv.resolvedHex)
+              // Also highlight newly added ones so user knows what appeared
+              alreadyExists.push(key)
+            } else {
+              alreadyExists.push(key)
+            }
+          }
+        } else {
+          console.log('[ThemeWidget] No CSS variables found driving this element\'s colors.')
+        }
+
+        if (alreadyExists.length > 0) {
+          setHighlightedKeys(alreadyExists)
+          setTimeout(() => setHighlightedKeys([]), 800)
+        }
+
+        setIsPickingElement(false)
+      }, 50)
+    }
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsPickingElement(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEsc, true)
+    document.addEventListener('mousemove', handleMouseMove, true)
+    document.addEventListener('click', handleClick, true)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, true)
+      document.removeEventListener('click', handleClick, true)
+      document.removeEventListener('keydown', handleEsc, true)
+      
+      if (highlight.parentNode) {
+        highlight.parentNode.removeChild(highlight)
+      }
+      if (tooltip.parentNode) {
+        tooltip.parentNode.removeChild(tooltip)
+      }
+      if (cursorStyle.parentNode) {
+        cursorStyle.parentNode.removeChild(cursorStyle)
+      }
+      for (const s of shadowCursorStyles) {
+        if (s.parentNode) s.parentNode.removeChild(s)
+      }
+      
+      // Cleanup any lingering old inline styles from previous implementation (just in case)
+      document.querySelectorAll('[data-element-picker]').forEach(el => {
+        (el as HTMLElement).removeAttribute('data-element-picker');
+        (el as HTMLElement).style.outline = '';
+        (el as HTMLElement).style.outlineOffset = '';
+        (el as HTMLElement).style.cursor = '';
+      })
+    }
+  }, [isPickingElement, customColors])
+
+  /**
+   * Converts a CSS variable name to a short human-readable label.
+   * e.g. "--site-header-background" → "Header Bg"
+   *      "--primary-color" → "Primary"
+   */
+  const humanizeVarName = (name: string): string => {
+    // Strip leading dashes
+    let clean = name.replace(/^-+/, '')
+    // Split on dashes/underscores
+    const parts = clean.split(/[-_]+/).filter(Boolean)
+    // Map common abbreviations
+    const abbrevs: Record<string, string> = {
+      'background': 'Bg', 'foreground': 'Fg', 'color': 'Clr',
+      'primary': 'Primary', 'secondary': 'Secondary',
+      'accent': 'Accent', 'text': 'Txt', 'border': 'Border',
+      'surface': 'Surface', 'header': 'Header', 'footer': 'Footer',
+      'nav': 'Nav', 'sidebar': 'Side', 'card': 'Card', 'muted': 'Muted',
+    }
+    const mapped = parts.map(p => abbrevs[p.toLowerCase()] || (p.charAt(0).toUpperCase() + p.slice(1)))
+    // Limit to 3 words max for compact display
+    return mapped.slice(0, 3).join(' ')
+  }
+
+  /** Check if a key is one of the 11 core widget keys */
+  const isCoreKey = (key: string): boolean => {
+    return (WIDGET_INTERNAL_KEYS as readonly string[]).includes(key)
+  }
+
+  /** Get extra (non-core) keys in customColors */
+  const extraKeys = Object.keys(customColors).filter(k => !isCoreKey(k))
 
   return (
     <div className="relative flex flex-col gap-3.5 items-center w-full">
@@ -1277,21 +1432,36 @@ export function DesignControls({
             onChange={handleDesignChange}
           />
         )}
-        <Segmented<"default" | "custom" | "mapper" | "thCtrl" | "stMgr">
+        <Segmented<"default" | "custom">
             label="Palette Engine"
             icon={<Palette className="size-3.5" aria-hidden />}
             options={[
-              { id: "default", label: "Default" },
+              { id: "default", label: "Off" },
               { id: "custom", label: "Custom" },
-              { id: "mapper", label: "Mapper" },
-              { id: "thCtrl", label: "Smart" },
-              { id: "stMgr", label: "Override" },
             ]}
             value={mounted ? mode : undefined}
             onChange={(val) => {
-              setMode(val as "default" | "custom" | "mapper" | "thCtrl" | "stMgr")
+              setMode(val as "default" | "custom")
             }}
           />
+
+        {/* Force Override Toggle — only visible in Custom mode */}
+        {mounted && mode === "custom" && (
+          <button
+            type="button"
+            onClick={() => setForceOverride(!forceOverride)}
+            title="Forces colors on all elements, even those without CSS variables. Use for stubborn sites."
+            className={cn(
+              "flex items-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-semibold transition-all border cursor-pointer",
+              forceOverride
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 ring-1 ring-amber-500/30"
+                : "bg-foreground/5 border-foreground/10 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+            )}
+          >
+            <Wand2 className="size-3" />
+            Force Override {forceOverride ? "ON" : "OFF"}
+          </button>
+        )}
 
         {mounted && (
           <div className="flex items-center gap-1 ml-1 pl-3 border-l border-white/20 h-7">
@@ -1452,101 +1622,7 @@ export function DesignControls({
       {mounted && mode !== "default" && (
         <div className="flex flex-col gap-3.5 border-t border-border/20 pt-3.5 w-full">
 
-        {/* Mapper Configuration UI */}
-        {mounted && mode === "mapper" && (
-          <div className="flex flex-col gap-3 w-full px-1 py-3 border-t border-border/20">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Variable Mappings</span>
-                <span className="text-[9px] text-muted-foreground bg-foreground/5 px-2 rounded-full py-0.5 border border-foreground/10">Map our tokens to your CSS variables</span>
-              </div>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleScanVariables}
-                  title="Scan page for CSS variables"
-                  className="flex items-center gap-1 px-2 py-1 bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 rounded transition-colors text-[9px] text-foreground font-medium"
-                >
-                  <Search className="size-3" />
-                  Scan Variables
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyVariables}
-                  title="Copy all detected CSS variables to clipboard"
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1 border rounded transition-colors text-[9px] font-medium",
-                    varsCopied
-                      ? "bg-green-500/20 text-green-400 border-green-500/30"
-                      : "bg-foreground/5 hover:bg-foreground/10 border-foreground/10 text-foreground"
-                  )}
-                >
-                  {varsCopied ? <Check className="size-3" /> : <Copy className="size-3" />}
-                  {varsCopied ? "Copied!" : "Copy Vars"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAutoMap}
-                  title="Auto-detect and map matching variables"
-                  className="flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 rounded transition-colors text-[9px] font-medium"
-                >
-                  <Wand2 className="size-3" />
-                  Auto-Map
-                </button>
-              </div>
-            </div>
-            
-            <datalist id="detected-vars">
-              {detectedVariables.map(v => <option key={v} value={v} />)}
-            </datalist>
-<div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {Object.keys(customColors).map(key => (
-                <div key={key} className="flex flex-col gap-1">
-                  <label className="text-[9px] text-muted-foreground uppercase tracking-wide truncate">{key}</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      placeholder="--var-name"
-                      value={mapperMappings[key] || ""}
-                      onChange={(e) => setMapperMappings({ ...mapperMappings, [key]: e.target.value })}
-                      className="h-6 flex-1 min-w-0 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      list="detected-vars"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setActivePickerToken(key === activePickerToken ? null : key)}
-                      title="Pick element from page"
-                      className={`h-6 w-6 flex items-center justify-center shrink-0 rounded transition-colors ${activePickerToken === key ? 'bg-primary text-primary-foreground' : 'bg-foreground/5 hover:bg-foreground/10 text-muted-foreground'}`}
-                    >
-                      <Crosshair className="size-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div className="flex flex-col gap-1">
-                  <label className="text-[9px] text-muted-foreground uppercase tracking-wide truncate">border-radius</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      placeholder="--radius"
-                      value={mapperMappings['radius'] || ""}
-                      onChange={(e) => setMapperMappings({ ...mapperMappings, ['radius']: e.target.value })}
-                      className="h-6 flex-1 min-w-0 text-[10px] bg-black/20 border border-white/10 rounded px-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      list="detected-vars"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setActivePickerToken('radius' === activePickerToken ? null : 'radius')}
-                      title="Pick element from page"
-                      className={`h-6 w-6 flex items-center justify-center shrink-0 rounded transition-colors ${activePickerToken === 'radius' ? 'bg-primary text-primary-foreground' : 'bg-foreground/5 hover:bg-foreground/10 text-muted-foreground'}`}
-                    >
-                      <Crosshair className="size-3" />
-                    </button>
-                  </div>
-                </div>
-            </div>
-          </div>
-        )}
+        {/* Mapper Configuration UI removed — replaced by Element Picker + Custom Engine */}
           {/* Presets Library */}
           <div className="flex items-center gap-3 w-full px-1">
             <div className="flex items-center justify-center shrink-0">
@@ -1940,119 +2016,80 @@ export function DesignControls({
           {/* Color Swatch Pickers Grid */}
           <div className="w-full pb-1 relative z-0">
             <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-4">
-              {/* Standard Pickers */}
+              {/* Core Widget Pickers (always shown) */}
               <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar px-2 pb-2">
-                <DraggableColorPicker
-                  colorKey="background" label="Bg" value={customColors.background}
-                  onChange={(v) => setCustomColor("background", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.background} onToggleLock={() => toggleLock("background")}
-                />
-                <DraggableColorPicker
-                  colorKey="foreground" label="Text" value={customColors.foreground}
-                  onChange={(v) => setCustomColor("foreground", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.foreground} onToggleLock={() => toggleLock("foreground")}
-                />
-                <DraggableColorPicker
-                  colorKey="card" label="Card" value={customColors.card}
-                  onChange={(v) => setCustomColor("card", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.card} onToggleLock={() => toggleLock("card")}
-                />
-                <DraggableColorPicker
-                  colorKey="cardForeground" label="Card Txt" value={customColors.cardForeground}
-                  onChange={(v) => setCustomColor("cardForeground", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.cardForeground} onToggleLock={() => toggleLock("cardForeground")}
-                />
-                <DraggableColorPicker
-                  colorKey="primary" label="Accent" value={customColors.primary}
-                  onChange={(v) => setCustomColor("primary", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.primary} onToggleLock={() => toggleLock("primary")}
-                />
-                <DraggableColorPicker
-                  colorKey="primaryForeground" label="Acc Txt" value={customColors.primaryForeground}
-                  onChange={(v) => setCustomColor("primaryForeground", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.primaryForeground} onToggleLock={() => toggleLock("primaryForeground")}
-                />
-                <DraggableColorPicker
-                  colorKey="secondary" label="Sec" value={customColors.secondary}
-                  onChange={(v) => setCustomColor("secondary", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.secondary} onToggleLock={() => toggleLock("secondary")}
-                />
-                <DraggableColorPicker
-                  colorKey="secondaryForeground" label="Sec Txt" value={customColors.secondaryForeground}
-                  onChange={(v) => setCustomColor("secondaryForeground", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.secondaryForeground} onToggleLock={() => toggleLock("secondaryForeground")}
-                />
-                <DraggableColorPicker
-                  colorKey="muted" label="Muted" value={customColors.muted}
-                  onChange={(v) => setCustomColor("muted", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.muted} onToggleLock={() => toggleLock("muted")}
-                />
-                <DraggableColorPicker
-                  colorKey="mutedForeground" label="Mut Txt" value={customColors.mutedForeground}
-                  onChange={(v) => setCustomColor("mutedForeground", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.mutedForeground} onToggleLock={() => toggleLock("mutedForeground")}
-                />
-                <DraggableColorPicker
-                  colorKey="border" label="Border" value={customColors.border}
-                  onChange={(v) => setCustomColor("border", v)} onSwap={handleSwapColors}
-                  isLocked={lockedColors.border} onToggleLock={() => toggleLock("border")}
-                />
+                {WIDGET_INTERNAL_KEYS.map(key => {
+                  // Human-readable labels for the core keys
+                  const coreLabels: Record<string, string> = {
+                    background: 'Bg', foreground: 'Text', card: 'Card',
+                    cardForeground: 'Card Txt', primary: 'Accent',
+                    primaryForeground: 'Acc Txt', secondary: 'Sec',
+                    secondaryForeground: 'Sec Txt', muted: 'Muted',
+                    mutedForeground: 'Mut Txt', border: 'Border',
+                  }
+                  return (
+                    <DraggableColorPicker
+                      key={key}
+                      colorKey={key}
+                      label={coreLabels[key] || key}
+                      value={customColors[key]}
+                      onChange={(v) => setCustomColor(key, v)}
+                      onSwap={handleSwapColors}
+                      isLocked={lockedColors[key]}
+                      onToggleLock={() => toggleLock(key)}
+                      isHighlighted={highlightedKeys.includes(key)}
+                    />
+                  )
+                })}
               </div>
 
-              {/* Pedestal */}
-              {(activeDesign === "gallery" || activeDesign === "storefront") && (
+              {/* Dynamically discovered host variables */}
+              {extraKeys.length > 0 && (
                 <div className="flex items-center gap-3 shrink-0 max-w-[90vw] sm:max-w-none overflow-x-auto no-scrollbar px-2 pb-2">
                   <div className="hidden 2xl:block w-px h-8 bg-white/20 shrink-0 mx-1" />
-                  <div className="flex items-center">
-                    <div
-                      className="grid transition-[grid-template-columns] duration-300 ease-in-out"
-                      style={{ gridTemplateColumns: pedestalColorsExpanded ? '1fr' : '0fr' }}
-                    >
-                      <div className="overflow-hidden">
-                        <div className="flex items-center gap-3 pr-3 w-max">
-                          <DraggableColorPicker
-                            colorKey="pedestalGlow" label="Ped Glow" value={customColors.pedestalGlow}
-                            onChange={(v) => setCustomColor("pedestalGlow", v)} onSwap={handleSwapColors}
-                            isLocked={lockedColors.pedestalGlow} onToggleLock={() => toggleLock("pedestalGlow")}
-                          />
-                          <DraggableColorPicker
-                            colorKey="pedestalTop" label="Ped Top" value={customColors.pedestalTop}
-                            onChange={(v) => setCustomColor("pedestalTop", v)} onSwap={handleSwapColors}
-                            isLocked={lockedColors.pedestalTop} onToggleLock={() => toggleLock("pedestalTop")}
-                          />
-                          <DraggableColorPicker
-                            colorKey="pedestalTopBorder" label="Ped Brdr" value={customColors.pedestalTopBorder}
-                            onChange={(v) => setCustomColor("pedestalTopBorder", v)} onSwap={handleSwapColors}
-                            isLocked={lockedColors.pedestalTopBorder} onToggleLock={() => toggleLock("pedestalTopBorder")}
-                          />
-                          <DraggableColorPicker
-                            colorKey="pedestalBody" label="Ped Body" value={customColors.pedestalBody}
-                            onChange={(v) => setCustomColor("pedestalBody", v)} onSwap={handleSwapColors}
-                            isLocked={lockedColors.pedestalBody} onToggleLock={() => toggleLock("pedestalBody")}
-                          />
-                          <DraggableColorPicker
-                            colorKey="pedestalShadow" label="Ped Shdw" value={customColors.pedestalShadow}
-                            onChange={(v) => setCustomColor("pedestalShadow", v)} onSwap={handleSwapColors}
-                            isLocked={lockedColors.pedestalShadow} onToggleLock={() => toggleLock("pedestalShadow")}
-                          />
-
-                        </div>
-                      </div>
+                  {extraKeys.map(key => (
+                    <div key={key} className="relative group/extra">
+                      <DraggableColorPicker
+                        colorKey={key}
+                        label={humanizeVarName(key)}
+                        value={customColors[key]}
+                        onChange={(v) => setCustomColor(key, v)}
+                        onSwap={handleSwapColors}
+                        isLocked={lockedColors[key]}
+                        onToggleLock={() => toggleLock(key)}
+                        isHighlighted={highlightedKeys.includes(key)}
+                      />
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => removeCustomColor(key)}
+                        title={`Remove ${key}`}
+                        className="absolute -top-1 -left-1 p-0.5 rounded-full bg-red-500/90 text-white border border-red-600 opacity-0 group-hover/extra:opacity-100 transition-opacity shadow-sm hover:scale-110 z-10"
+                      >
+                        <X className="size-2.5" />
+                      </button>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setPedestalColorsExpanded(!pedestalColorsExpanded)}
-                      className="flex flex-col items-center gap-0.5 text-[9px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-                    >
-                      <div className="size-6 rounded-full bg-foreground/5 border border-foreground/10 flex items-center justify-center hover:bg-foreground/10">
-                        <ChevronLeft className={cn("size-3.5 transition-transform duration-300", !pedestalColorsExpanded && "rotate-180")} />
-                      </div>
-                      <span>Pedestal</span>
-                    </button>
-                  </div>
+                  ))}
                 </div>
               )}
+
+              {/* Element Picker Button */}
+              <div className="flex items-center gap-2 shrink-0 px-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPickingElement(!isPickingElement)}
+                  title={isPickingElement ? "Cancel element picker (Esc)" : "Pick an element to discover its CSS variables"}
+                  className={cn(
+                    "flex items-center gap-1.5 h-7 px-3 rounded-lg text-[10px] font-semibold transition-all border",
+                    isPickingElement
+                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 ring-1 ring-cyan-500/30 animate-pulse"
+                      : "bg-foreground/5 border-foreground/10 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                  )}
+                >
+                  <Crosshair className="size-3.5" />
+                  {isPickingElement ? "Picking..." : "Pick Element"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2113,28 +2150,28 @@ export function DesignControls({
             {[
               {
                 label: "Main Body",
-                bgKey: "background" as keyof CustomColors,
-                fgKey: "foreground" as keyof CustomColors,
+                bgKey: "background",
+                fgKey: "foreground",
               },
               {
                 label: "Card Content",
-                bgKey: "card" as keyof CustomColors,
-                fgKey: "cardForeground" as keyof CustomColors,
+                bgKey: "card",
+                fgKey: "cardForeground",
               },
               {
                 label: "Accent Button",
-                bgKey: "primary" as keyof CustomColors,
-                fgKey: "primaryForeground" as keyof CustomColors,
+                bgKey: "primary",
+                fgKey: "primaryForeground",
               },
               {
                 label: "Secondary Btn",
-                bgKey: "secondary" as keyof CustomColors,
-                fgKey: "secondaryForeground" as keyof CustomColors,
+                bgKey: "secondary",
+                fgKey: "secondaryForeground",
               },
               {
                 label: "Muted Text",
-                bgKey: "muted" as keyof CustomColors,
-                fgKey: "mutedForeground" as keyof CustomColors,
+                bgKey: "muted",
+                fgKey: "mutedForeground",
               },
             ].map((pair) => {
               const bg = activeHexColors[pair.bgKey] || "#000000"
