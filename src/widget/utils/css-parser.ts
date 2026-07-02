@@ -66,66 +66,36 @@ async function fetchCorsVariables() {
 // Start fetching immediately
 fetchCorsVariables()
 
-export function extractHostVariableNames(path?: EventTarget[]): Set<string> {
-  const varNames = new Set<string>(corsVarNames)
+let globalHostVariablesCache: Set<string> | null = null
 
-  const sheetsToScan: CSSStyleSheet[] = Array.from(document.styleSheets)
-  if (document.adoptedStyleSheets) {
-    sheetsToScan.push(...document.adoptedStyleSheets)
+export function extractHostVariableNames(path?: EventTarget[], forceRefresh = false): Set<string> {
+  if (!globalHostVariablesCache || forceRefresh) {
+    globalHostVariablesCache = new Set<string>(corsVarNames)
+    const sheetsToScan: CSSStyleSheet[] = Array.from(document.styleSheets)
+    if (document.adoptedStyleSheets) {
+      sheetsToScan.push(...document.adoptedStyleSheets)
+    }
+    knownShadowRoots.forEach(root => {
+      if (root.styleSheets) sheetsToScan.push(...Array.from(root.styleSheets))
+      if (root.adoptedStyleSheets) sheetsToScan.push(...root.adoptedStyleSheets)
+    })
+    scanSheetsForVariables(sheetsToScan, globalHostVariablesCache)
   }
 
-  // Add all stylesheets from all known shadow roots (not just the ones in path)
-  knownShadowRoots.forEach(root => {
-    if (root.styleSheets) sheetsToScan.push(...Array.from(root.styleSheets))
-    if (root.adoptedStyleSheets) sheetsToScan.push(...root.adoptedStyleSheets)
-  })
-
+  // Check for any newly discovered shadow roots in the path
   if (path) {
+    const newSheets: CSSStyleSheet[] = []
     for (const target of path) {
       if (target instanceof ShadowRoot) {
         if (!knownShadowRoots.has(target)) {
           knownShadowRoots.add(target)
-          if (target.styleSheets) sheetsToScan.push(...Array.from(target.styleSheets))
-          if (target.adoptedStyleSheets) sheetsToScan.push(...target.adoptedStyleSheets)
+          if (target.styleSheets) newSheets.push(...Array.from(target.styleSheets))
+          if (target.adoptedStyleSheets) newSheets.push(...target.adoptedStyleSheets)
         }
       }
     }
-  }
-
-  // Iterate over all style sheets
-  for (let i = 0; i < sheetsToScan.length; i++) {
-    const sheet = sheetsToScan[i]
-    try {
-      // Accessing cssRules might throw a SecurityError if the stylesheet is cross-origin
-      if (!sheet.cssRules) continue
-
-      for (let j = 0; j < sheet.cssRules.length; j++) {
-        const rule = sheet.cssRules[j] as CSSStyleRule
-        if (rule.style) {
-          // Extract defined variables
-          for (let k = 0; k < rule.style.length; k++) {
-            const prop = rule.style[k]
-            if (prop.startsWith('--') && !prop.startsWith('--widget-')) {
-              varNames.add(prop)
-            }
-          }
-          // Extract USED variables (handles cases where variable definition is in a CORS stylesheet,
-          // but it is used in a readable local stylesheet or shadow DOM style tag)
-          if (rule.style.cssText) {
-            const matches = rule.style.cssText.match(/var\(\s*(--[a-zA-Z0-9_-]+)/g)
-            if (matches) {
-              matches.forEach(m => {
-                const varName = m.replace(/var\(\s*/, '')
-                if (!varName.startsWith('--widget-')) {
-                  varNames.add(varName)
-                }
-              })
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore CORS errors from external stylesheets
+    if (newSheets.length > 0) {
+      scanSheetsForVariables(newSheets, globalHostVariablesCache)
     }
   }
 
@@ -142,7 +112,7 @@ export function extractHostVariableNames(path?: EventTarget[]): Set<string> {
     for (let i = 0; i < el.style.length; i++) {
       const prop = el.style[i]
       if (prop.startsWith('--') && !prop.startsWith('--widget-')) {
-        varNames.add(prop)
+        globalHostVariablesCache.add(prop)
       }
     }
     
@@ -153,23 +123,60 @@ export function extractHostVariableNames(path?: EventTarget[]): Set<string> {
         matches.forEach(m => {
           const varName = m.replace(/var\(\s*/, '')
           if (!varName.startsWith('--widget-')) {
-            varNames.add(varName)
+            globalHostVariablesCache.add(varName)
           }
         })
       }
     }
   }
-  return varNames
+
+  return globalHostVariablesCache
 }
+
+function scanSheetsForVariables(sheetsToScan: CSSStyleSheet[], varNames: Set<string>) {
+  for (let i = 0; i < sheetsToScan.length; i++) {
+    const sheet = sheetsToScan[i]
+    try {
+      if (!sheet.cssRules) continue
+      for (let j = 0; j < sheet.cssRules.length; j++) {
+        const rule = sheet.cssRules[j] as CSSStyleRule
+        if (rule.style) {
+          for (let k = 0; k < rule.style.length; k++) {
+            const prop = rule.style[k]
+            if (prop.startsWith('--') && !prop.startsWith('--widget-')) {
+              varNames.add(prop)
+            }
+          }
+          if (rule.style.cssText) {
+            const matches = rule.style.cssText.match(/var\(\s*(--[a-zA-Z0-9_-]+)/g)
+            if (matches) {
+              matches.forEach(m => {
+                const varName = m.replace(/var\(\s*/, '')
+                if (!varName.startsWith('--widget-')) {
+                  varNames.add(varName)
+                }
+              })
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore CORS errors
+    }
+  }
+}
+// ... replaced by scanSheetsForVariables ...
 
 /**
  * Resolves a raw CSS value (which may be an HSL tuple, rgb(), hex, etc.)
  * into a hex color string using a temporary DOM element.
  */
-export function resolveColorToHex(rawValue: string, context: HTMLElement = document.body): string | null {
-  const dummy = document.createElement('div')
-  dummy.style.display = 'none'
-  context.appendChild(dummy)
+export function resolveColorToHex(rawValue: string, context: HTMLElement = document.body, providedDummy?: HTMLElement): string | null {
+  const dummy = providedDummy || document.createElement('div')
+  if (!providedDummy) {
+    dummy.style.display = 'none'
+    context.appendChild(dummy)
+  }
 
   // Try the value directly
   dummy.style.backgroundColor = rawValue
@@ -194,7 +201,13 @@ export function resolveColorToHex(rawValue: string, context: HTMLElement = docum
     }
   }
 
-  context.removeChild(dummy)
+  // Clear inline style if reusing
+  if (providedDummy) {
+    dummy.style.backgroundColor = ''
+  } else {
+    context.removeChild(dummy)
+  }
+
   return hex
 }
 
@@ -306,41 +319,40 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
 
   // Pre-filter candidate variables
   const candidates: { name: string, hex: string }[] = []
+  
+  const dummy = document.createElement('div')
+  dummy.style.display = 'none'
+  element.appendChild(dummy)
+
   for (const varName of allVarNames) {
     if (seen.has(varName)) continue
 
-    // RESOLVE THE VARIABLE ON THE TARGET ELEMENT ITSELF!
-    // This is critical. If the variable is defined on a Shadow Host or a specific container
-    // like .theme-dark, it won't exist on :root, but it WILL exist on the element itself!
     const valueOnElement = computed.getPropertyValue(varName).trim()
     if (!valueOnElement) continue
 
-    const hex = resolveColorToHex(valueOnElement, element)
+    const hex = resolveColorToHex(valueOnElement, element, dummy)
     if (!hex) continue
 
     const targetHexColors = targetColors.map(c => rgbStringToHex(c)).filter(Boolean)
     
-    // We append the dummy to `element` so it correctly resolves variables using element's context
-    const dummy = document.createElement('div')
-    dummy.style.display = 'none'
-    element.appendChild(dummy)
     dummy.style.backgroundColor = hex
     const resolvedRgb = window.getComputedStyle(dummy).backgroundColor
-    element.removeChild(dummy)
-    
     const resolvedHex = rgbStringToHex(resolvedRgb)
 
-    // Only test variables that currently evaluate to one of the target colors on the element
     if (resolvedHex && targetHexColors.includes(resolvedHex)) {
       candidates.push({ name: varName, hex })
     }
+    dummy.style.backgroundColor = ''
   }
+  
+  element.removeChild(dummy)
 
-  // Targeted Mutation Test
+  if (candidates.length === 0) return results
+
+  // Targeted Mutation Test using CSSOM and Chunked Batch Testing
   const styleEl = document.createElement('style')
   document.head.appendChild(styleEl)
 
-  // Also inject mutation styles into any open ShadowRoots in the path
   const shadowStyles: HTMLStyleElement[] = []
   if (path) {
     for (const p of path) {
@@ -352,54 +364,73 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
     }
   }
 
+  const maxSpecificitySelector = `:not(#theme-widget-fake-id-1):not(#theme-widget-fake-id-2):not(#theme-widget-fake-id-3) *`
+  const styleEls = [styleEl, ...shadowStyles]
+  const rules: CSSStyleRule[] = []
+  
+  for (const s of styleEls) {
+    const sheet = s.sheet as CSSStyleSheet
+    if (sheet) {
+      sheet.insertRule(`${maxSpecificitySelector} {}`, 0)
+      rules.push(sheet.cssRules[0] as CSSStyleRule)
+    }
+  }
+
+  type Variation = { varName: string, format: string, formatType: string, hex: string }
+  const allVariations: Variation[] = []
   for (const candidate of candidates) {
-    const varName = candidate.name
+    allVariations.push({ varName: candidate.name, format: `rgb(1, 2, 3)`, formatType: 'hex', hex: candidate.hex })
+    allVariations.push({ varName: candidate.name, format: `1, 2, 3`, formatType: 'comma-tuple', hex: candidate.hex })
+    allVariations.push({ varName: candidate.name, format: `1 2 3`, formatType: 'space-tuple', hex: candidate.hex })
+    allVariations.push({ varName: candidate.name, format: `1 2% 3%`, formatType: 'hsl-tuple', hex: candidate.hex })
+  }
+
+  const chunkSize = 20
+  for (let i = 0; i < allVariations.length; i += chunkSize) {
+    const chunk = allVariations.slice(i, i + chunkSize)
     
-    // We try multiple mutation formats because we don't know how the site uses the variable.
-    // E.g. `color: var(--var)` needs `rgb(1,2,3)`
-    // `color: rgb(var(--var))` needs `1, 2, 3` or `1 2 3`
-    const mutationFormats = [
-      `rgb(1, 2, 3)`, // Standard color
-      `1, 2, 3`,      // Comma-separated tuple (Tailwind v2)
-      `1 2 3`,        // Space-separated tuple (Tailwind v3)
-      `1 2% 3%`       // HSL tuple
-    ]
-
-    let actuallyDrives = false
-    let successfulFormat = 'rgb(1, 2, 3)'
-
-    for (const format of mutationFormats) {
-      // Use extremely high specificity with ID pseudo-classes to ensure we override any site theme selectors
-      // like html[data-theme="dark"] or #app or .theme-provider
-      // :not(#a) adds 1 ID specificity without restricting matches. We use 3 of them = 3,0,0
-      const maxSpecificitySelector = `:not(#theme-widget-fake-id-1):not(#theme-widget-fake-id-2):not(#theme-widget-fake-id-3) *`
-      const cssText = `${maxSpecificitySelector} { ${varName}: ${format} !important; }`
-      styleEl.innerHTML = cssText
-      for (const s of shadowStyles) s.innerHTML = cssText
-      
-      for (const t of validTargets) {
-        const newComputed = window.getComputedStyle(t.element)
-        const newVal = newComputed[t.property as keyof CSSStyleDeclaration] as string
-        if (newVal !== t.originalValue) {
-          actuallyDrives = true
-          successfulFormat = format
-          break
-        }
-      }
-      if (actuallyDrives) break // Stop trying formats if one worked
+    // Apply chunk
+    for (const v of chunk) {
+      for (const rule of rules) rule.style.setProperty(v.varName, v.format, 'important')
     }
     
-    if (actuallyDrives) {
-      const keyName = varName.startsWith('--') ? varName : `--${varName}`
-      if (!seen.has(keyName)) {
-        seen.add(keyName)
+    let chunkChanged = false
+    for (const t of validTargets) {
+      const newComputed = window.getComputedStyle(t.element)
+      if (newComputed[t.property as keyof CSSStyleDeclaration] !== t.originalValue) {
+        chunkChanged = true
+        break
+      }
+    }
+    
+    // Remove chunk
+    for (const v of chunk) {
+      for (const rule of rules) rule.style.removeProperty(v.varName)
+    }
+    
+    if (chunkChanged) {
+      // Test individually
+      for (const v of chunk) {
+        const keyName = v.varName.startsWith('--') ? v.varName : `--${v.varName}`
+        if (seen.has(keyName)) continue
         
-        let formatType = 'hex'
-        if (successfulFormat === '1, 2, 3') formatType = 'comma-tuple'
-        else if (successfulFormat === '1 2 3') formatType = 'space-tuple'
-        else if (successfulFormat === '1 2% 3%') formatType = 'hsl-tuple'
-
-        results.push({ name: keyName, resolvedHex: candidate.hex, format: formatType })
+        for (const rule of rules) rule.style.setProperty(v.varName, v.format, 'important')
+        
+        let actuallyDrives = false
+        for (const t of validTargets) {
+          const newComputed = window.getComputedStyle(t.element)
+          if (newComputed[t.property as keyof CSSStyleDeclaration] !== t.originalValue) {
+            actuallyDrives = true
+            break
+          }
+        }
+        
+        for (const rule of rules) rule.style.removeProperty(v.varName)
+        
+        if (actuallyDrives) {
+          seen.add(keyName)
+          results.push({ name: keyName, resolvedHex: v.hex, format: v.formatType })
+        }
       }
     }
   }
