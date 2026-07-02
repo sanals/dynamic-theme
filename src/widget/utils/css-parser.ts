@@ -349,30 +349,32 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
 
   if (candidates.length === 0) return results
 
-  // Targeted Mutation Test using CSSOM and Chunked Batch Testing
-  const styleEl = document.createElement('style')
-  document.head.appendChild(styleEl)
-
-  const shadowStyles: HTMLStyleElement[] = []
-  if (path) {
-    for (const p of path) {
-      if (p instanceof ShadowRoot) {
-        const s = document.createElement('style')
-        p.appendChild(s)
-        shadowStyles.push(s)
-      }
-    }
+  // Targeted Mutation Test using Inline Style Path Mutation and Chunked Batch Testing
+  const pathElements = (path || []).filter(p => p instanceof HTMLElement) as HTMLElement[]
+  if (!pathElements.includes(element)) {
+    pathElements.unshift(element) // ensure target element is always in there
   }
 
-  const maxSpecificitySelector = `:not(#theme-widget-fake-id-1):not(#theme-widget-fake-id-2):not(#theme-widget-fake-id-3) *`
-  const styleEls = [styleEl, ...shadowStyles]
-  const rules: CSSStyleRule[] = []
-  
-  for (const s of styleEls) {
-    const sheet = s.sheet as CSSStyleSheet
-    if (sheet) {
-      sheet.insertRule(`${maxSpecificitySelector} {}`, 0)
-      rules.push(sheet.cssRules[0] as CSSStyleRule)
+  // Backup original styles to prevent breaking the site
+  const originalStyles = new Map<HTMLElement, Map<string, { value: string, priority: string }>>()
+  for (const el of pathElements) {
+    const map = new Map<string, { value: string, priority: string }>()
+    for (const candidate of candidates) {
+      const val = el.style.getPropertyValue(candidate.name)
+      const prio = el.style.getPropertyPriority(candidate.name)
+      if (val !== '') {
+        map.set(candidate.name, { value: val, priority: prio })
+      }
+    }
+    originalStyles.set(el, map)
+  }
+
+  function restoreProperty(el: HTMLElement, varName: string) {
+    const backup = originalStyles.get(el)?.get(varName)
+    if (backup) {
+      el.style.setProperty(varName, backup.value, backup.priority)
+    } else {
+      el.style.removeProperty(varName)
     }
   }
 
@@ -389,9 +391,11 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
   for (let i = 0; i < allVariations.length; i += chunkSize) {
     const chunk = allVariations.slice(i, i + chunkSize)
     
-    // Apply chunk
+    // Apply chunk via inline styles to all path elements
     for (const v of chunk) {
-      for (const rule of rules) rule.style.setProperty(v.varName, v.format, 'important')
+      for (const el of pathElements) {
+        el.style.setProperty(v.varName, v.format, 'important')
+      }
     }
     
     let chunkChanged = false
@@ -405,7 +409,9 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
     
     // Remove chunk
     for (const v of chunk) {
-      for (const rule of rules) rule.style.removeProperty(v.varName)
+      for (const el of pathElements) {
+        restoreProperty(el, v.varName)
+      }
     }
     
     if (chunkChanged) {
@@ -414,7 +420,9 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
         const keyName = v.varName.startsWith('--') ? v.varName : `--${v.varName}`
         if (seen.has(keyName)) continue
         
-        for (const rule of rules) rule.style.setProperty(v.varName, v.format, 'important')
+        for (const el of pathElements) {
+          el.style.setProperty(v.varName, v.format, 'important')
+        }
         
         let actuallyDrives = false
         for (const t of validTargets) {
@@ -425,7 +433,9 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
           }
         }
         
-        for (const rule of rules) rule.style.removeProperty(v.varName)
+        for (const el of pathElements) {
+          restoreProperty(el, v.varName)
+        }
         
         if (actuallyDrives) {
           seen.add(keyName)
@@ -433,11 +443,6 @@ export function extractElementVariables(element: HTMLElement, path?: EventTarget
         }
       }
     }
-  }
-
-  document.head.removeChild(styleEl)
-  for (const s of shadowStyles) {
-    if (s.parentNode) s.parentNode.removeChild(s)
   }
 
   return results
